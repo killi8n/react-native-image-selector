@@ -1,7 +1,16 @@
 import { NativeModules } from 'react-native';
 
+export interface Photo {
+  fileSize: number
+  fileName: string
+  type: string
+  uri: string
+  data: string
+}
+
 type ImageSelectorType = {
-  multiply(a: number, b: number): Promise<number>;
+  getPhotos: (limit: number) => Promise<Photo[]>
+  initializePhotos: () => Promise<void>
 };
 
 const { ImageSelector } = NativeModules;

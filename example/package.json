@@ -6,9 +6,11 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
-    "start": "react-native start"
+    "start": "react-native start",
+    "prepare": "patch-package"
   },
   "dependencies": {
+    "patch-package": "^6.2.2",
     "react": "16.11.0",
     "react-native": "0.62.2"
   },
