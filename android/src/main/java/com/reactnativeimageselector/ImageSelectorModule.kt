@@ -21,10 +21,10 @@ import java.util.*
 class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext), PermissionListener {
 
   companion object {
-    val LIBRARY_PERMISSION_REQUEST_CODE = 100
-    val CAMERA_PERMISSION_REQUEST_CODE = 101
-    val IMAGE_CAPTURE_REQUEST_CODE = 102
-    val PICK_IMAGE_REQUEST_CODE = 103
+    val LIBRARY_PERMISSION_REQUEST_CODE: Int = 1000000000
+    val CAMERA_PERMISSION_REQUEST_CODE: Int = 1010000000
+    val IMAGE_CAPTURE_REQUEST_CODE: Int = 1020000000
+    val PICK_IMAGE_REQUEST_CODE: Int = 1030000000
     var cameraCaptureURI: Uri? = null
     var cameraCaptureFile: File? = null
   }
@@ -130,8 +130,9 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
             }
             .setNeutralButton("취소", { dialog, which ->
               val error = Arguments.createMap()
-              error.putString("erorr", "USER_CACNEL")
+              error.putString("error", "USER_CACNEL")
               callback(error)
+              this.globalCallback = null
             })
           dialogBuilder.show()
         }
@@ -143,12 +144,30 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     if (requestCode == CAMERA_PERMISSION_REQUEST_CODE && grantResults != null) {
       if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
         this.launchCamera()
+      } else {
+        this.globalCallback.let { callback ->
+          if (callback != null) {
+            val error = Arguments.createMap()
+            error.putString("error", "USER_CACNEL")
+            callback(error)
+            this.globalCallback = null
+          }
+        }
       }
     }
 
     if (requestCode == LIBRARY_PERMISSION_REQUEST_CODE && grantResults != null) {
       if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
         this.launchLibrary()
+      } else {
+        this.globalCallback.let { callback ->
+          if (callback != null) {
+            val error = Arguments.createMap()
+            error.putString("error", "USER_CACNEL")
+            callback(error)
+            this.globalCallback = null
+          }
+        }
       }
     }
     return true
