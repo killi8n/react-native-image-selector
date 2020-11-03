@@ -61,6 +61,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                 callback([
                     error
                 ])
+                self.globalCallback = nil
             }
         }
     }
@@ -78,6 +79,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                     callback([
                         error
                     ])
+                    self.globalCallback = nil
                     break
             }
         }
@@ -98,6 +100,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                 callback([
                     error
                 ])
+                self.globalCallback = nil
                 break
         }
     }
@@ -117,6 +120,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                 callback([
                     error
                 ])
+                self.globalCallback = nil
                 break
         }
     }
@@ -158,6 +162,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                 callback([
                     ["error": "SIMULATOR_ERROR"]
                 ])
+                self.globalCallback = nil
             #else
                 self.checkCameraPermission()
             #endif
@@ -170,6 +175,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
             callback([
                 ["error": "USER_CANCEL"]
             ])
+            self.globalCallback = nil
         }))
         DispatchQueue.main.async {
             guard let rootViewController = RCTPresentedViewController() else { return }
@@ -179,7 +185,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
         }
     }
     
-    func createCacheFile(imageData: Data) -> [String: Any] {
+    static func createCacheFile(imageData: Data) -> [String: Any] {
         let fileName: String = "react-native-image-selector_\(UUID().uuidString).png"
         let paths = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)
         let path = paths.first ?? ""
@@ -187,7 +193,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
         if !FileManager.default.fileExists(atPath: filePath) {
             FileManager.default.createFile(atPath: filePath, contents: imageData, attributes: nil)
         }
-        return ["filePath": filePath, "fileName": fileName]
+        return ["uri": "file://\(filePath)", "fileName": fileName, "type": "image/png", "fileSize": imageData.count]
     }
 }
 
@@ -199,60 +205,43 @@ extension ImageSelector: UIImagePickerControllerDelegate {
             callback([
                 ["error": "USER_CANCEL"]
             ])
+            self.globalCallback = nil
         }
     }
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         guard let callback = self.globalCallback else { return }
-        var response: [String: Any] = [:]
+        var response: [String: Any]? = nil
         switch picker.sourceType {
             case .camera:
                 if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
                     if let imageData = pickedImage.pngData() {
-                        let fileCreateResult = self.createCacheFile(imageData: imageData)
-                        response["uri"] = "file://\(fileCreateResult["filePath"] ?? "")"
-                        response["fileName"] = "\(fileCreateResult["fileName"] ?? "")"
-                        response["type"] = "png"
-                        response["fileSize"] = imageData.count
+                        let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
+                        response = fileCreateResult
                     }
                 }
-                callback([
-                    nil,
-                    response
-                ])
                 break
             case .photoLibrary, .savedPhotosAlbum:
-                if let referenceURL = info[UIImagePickerController.InfoKey.referenceURL] as? URL {
-                    response["uri"] = referenceURL.absoluteString
-                    response["type"] = (referenceURL.absoluteString as NSString).pathExtension
-                    let asset = PHAsset.fetchAssets(withALAssetURLs: [referenceURL], options: nil)
-                    if let fileName = asset.firstObject?.value(forKey: "filename") {
-                        response["fileName"] = fileName
-                    }
-                }
                 if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
                     if let imageData = pickedImage.pngData() {
-                        response["fileSize"] = imageData.count
+                        let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
+                        response = fileCreateResult
                     }
                 }
-                callback([
-                    nil,
-                    response
-                ])
                 break
             default:
+                break
+        }
+        picker.dismiss(animated: true) {
+            guard let response = response else {
                 callback([
                     ["error": "SOURCE_TYPE_MISMATCH"]
                 ])
-                break
+                self.globalCallback = nil
+                return
+            }
+            callback([nil, response])
+            self.globalCallback = nil
         }
-        picker.dismiss(animated: true, completion: nil)
-    }
-}
-
-extension ImageSelector: PHPickerViewControllerDelegate {
-    @available(iOS 14, *)
-    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-        picker.dismiss(animated: true, completion: nil)
     }
 }
 
@@ -394,27 +383,21 @@ extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UIColle
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let assets = self.fetchedAssets else { return }
         let asset = assets.object(at: indexPath.item)
-        var response: [String: Any] = [:]
-        if let assetResource = PHAssetResource.assetResources(for: asset).first {
-            let fileName = assetResource.originalFilename
-            response["fileName"] = fileName
-            let type = (fileName as NSString).pathExtension
-            response["type"] = type
-            if let fileSize = assetResource.value(forKey: "fileSize") as? Float {
-                response["fileSize"] = fileSize
-            }
-            asset.requestContentEditingInput(with: nil) { [weak self] (assetInput: PHContentEditingInput?, _: [AnyHashable : Any]) in
-                guard let `self` = self else { return }
-                if let absoluteURI = assetInput?.fullSizeImageURL?.absoluteString {
-                    response["uri"] = absoluteURI
+        let manager = PHImageManager.default()
+        let options = PHImageRequestOptions()
+        options.version = .original
+        options.isSynchronous = true
+        manager.requestImageData(for: asset, options: options) { [weak self] (imageData: Data?, _: String?, _: UIImage.Orientation, _: [AnyHashable : Any]?) in
+            guard let `self` = self else { return }
+            if let imageData = imageData {
+                let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
+                self.dismiss(animated: true) {
                     guard let callback = self.globalCallback else { return }
-                    self.dismiss(animated: true) {
-                        callback([
-                            nil,
-                            response
-                        ])
-                        self.globalCallback = nil
-                    }
+                    callback([
+                        nil,
+                        fileCreateResult
+                    ])
+                    self.globalCallback = nil
                 }
             }
         }
