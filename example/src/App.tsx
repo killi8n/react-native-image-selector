@@ -5,7 +5,6 @@ import ImageSelector from 'react-native-image-selector';
 export default function App() {
   const handlePhotos = async () => {
     try {
-      console.log('lanchPicker');
       ImageSelector.launchPicker((error, response) => {
         if (error) {
           console.log(error);
@@ -20,7 +19,6 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* <Image style={{ width: 50, height: 50 }} source={{ uri: "file:///storage/emulated/0/DCIM/Camera/IMG_20201102_211547.jpg" }} /> */}
       <Button title="GET USER PHOTOS" onPress={handlePhotos} />
     </SafeAreaView>
   );

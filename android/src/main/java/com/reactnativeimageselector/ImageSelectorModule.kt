@@ -128,7 +128,11 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
                   this.checkLibraryPermission()
                 }
               }
-              .setNeutralButton("취소", null)
+              .setNeutralButton("취소", { dialog, which ->
+                val error = Arguments.createMap()
+                error.putString("erorr", "USER_CACNEL")
+                callback(error)
+              })
             dialogBuilder.show()
           }
         }

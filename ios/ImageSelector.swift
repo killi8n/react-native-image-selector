@@ -167,7 +167,9 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
             self.checkLibraryPermission()
         }))
         alert.addAction(UIAlertAction(title: "취소", style: .cancel, handler: { (_: UIAlertAction) in
-            
+            callback([
+                ["error": "USER_CANCEL"]
+            ])
         }))
         DispatchQueue.main.async {
             guard let rootViewController = RCTPresentedViewController() else { return }
@@ -316,15 +318,10 @@ class ImageShowerViewController: UIViewController {
 class ImageShowerCell: UICollectionViewCell {
     let cellImageView: UIImageView = {
         let imageView = UIImageView(frame: .zero)
+        imageView.contentMode = .scaleAspectFill
+        imageView.layer.masksToBounds = true
         return imageView
     }()
-    var asset: PHAsset? = nil {
-        didSet (oldAsset) {
-            if let newAsset = asset {
-                self.fetchImage(asset: newAsset)
-            }
-        }
-    }
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.contentView.backgroundColor = .groupTableViewBackground
@@ -343,7 +340,6 @@ class ImageShowerCell: UICollectionViewCell {
     }
     
     override func prepareForReuse() {
-        super.prepareForReuse()
         self.cellImageView.image = nil
     }
     
@@ -351,13 +347,14 @@ class ImageShowerCell: UICollectionViewCell {
         let manager = PHImageManager.default()
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
-//        manager.requestImageData(for: asset, options: options) { (data: Data?, _: String?, _: UIImage.Orientation, _: [AnyHashable : Any]?) in
-//            if let data = data {
-//                self.cellImageView.image = UIImage(data: data)
-//            }
-//        }
-        manager.requestImage(for: asset, targetSize: CGSize(width: self.contentView.layer.frame.width, height: self.contentView.layer.frame.height), contentMode: .aspectFit, options: options) { (image: UIImage?, info: [AnyHashable : Any]?) in
-            self.cellImageView.image = image
+        options.isSynchronous = true
+        options.resizeMode = .exact
+        manager.requestImage(for: asset, targetSize: CGSize(width: self.contentView.frame.size.width, height: self.contentView.frame.size.height), contentMode: .aspectFill, options: options) { [weak self] (image: UIImage?, info: [AnyHashable : Any]?) in
+            guard let `self` = self else { return }
+            if let image = image {
+                self.cellImageView.image = image
+                return
+            }
         }
     }
 }
@@ -372,7 +369,9 @@ extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UIColle
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: self.reusableIdentifier, for: indexPath) as? ImageShowerCell else { return UICollectionViewCell() }
         guard let assets = self.fetchedAssets else { return cell }
         let asset = assets.object(at: indexPath.item)
-        cell.asset = asset
+        DispatchQueue.main.async {
+            cell.fetchImage(asset: asset)
+        }
         return cell
     }
     
@@ -414,6 +413,7 @@ extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UIColle
                             nil,
                             response
                         ])
+                        self.globalCallback = nil
                     }
                 }
             }
