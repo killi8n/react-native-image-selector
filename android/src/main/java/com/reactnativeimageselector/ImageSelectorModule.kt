@@ -1,101 +1,220 @@
 package com.reactnativeimageselector
 
 import android.Manifest
+import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Environment
 import android.provider.MediaStore
-import android.util.Base64
-import android.util.Log
-import androidx.loader.content.CursorLoader
+import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
 import java.io.File
+import java.util.*
+
 
 class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext), PermissionListener {
 
-    private val READ_EXTERNAL_STORAGE_REQUEST_CODE = 100
-    private var openLibraryPromise: Promise? = null
+    companion object {
+      val LIBRARY_PERMISSION_REQUEST_CODE = 100
+      val CAMERA_PERMISSION_REQUEST_CODE = 101
+      val IMAGE_CAPTURE_REQUEST_CODE = 102
+      val PICK_IMAGE_REQUEST_CODE = 103
+      var cameraCaptureURI: Uri? = null
+      var cameraCaptureFile: File? = null
+    }
+
+    private var globalCallback: Callback? = null
+
 
     override fun getName(): String {
       return "ImageSelector"
     }
 
-    fun requestPermission() {
-      val activity: PermissionAwareActivity = currentActivity as PermissionAwareActivity
-      activity.requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), READ_EXTERNAL_STORAGE_REQUEST_CODE, this)
-    }
-
-    fun getImages(promise: Promise) {
-      val projections = arrayOf(
-        MediaStore.Images.Media._ID,
-        MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-        MediaStore.Images.Media.SIZE,
-        MediaStore.Images.Media.DATA
-      )
-      val deviceImages = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-      val cursor = reactApplicationContext.contentResolver.query(
-        deviceImages,
-        projections,
-        null,
-        null,
-        null
-      )
-
-      val images = WritableNativeArray()
-      if (cursor.moveToFirst()) {
-        do {
-          val image = Arguments.createMap()
-
-          val _ID_COLUMN_INDEX = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-          val BUCKET_DISPLAY_NAME_INDEX = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-          val SIZE_INDEX = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
-          val DATA_INDEX = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
-
-          val _id = cursor.getString(_ID_COLUMN_INDEX)
-          val bucketDisplayName = cursor.getString(BUCKET_DISPLAY_NAME_INDEX)
-          val size = cursor.getDouble(SIZE_INDEX)
-          val data = cursor.getString(DATA_INDEX)
-
-          val file = File(data)
-          val fileURI = Uri.fromFile(File(data)).toString()
-          var base64Encoded = Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
-
-          image.putString("_id", _id)
-          image.putString("fileName", bucketDisplayName)
-          image.putString("type", data.substring(data.lastIndexOf(".") + 1))
-          image.putDouble("fileSize", size)
-          image.putString("uri", fileURI)
-          image.putString("data", base64Encoded)
-
-          images.pushMap(image)
-        } while (cursor.moveToNext())
-      }
-
-      promise.resolve(images)
-    }
-
-    @ReactMethod
-    fun openLibrary(promise: Promise) {
-      this.openLibraryPromise = promise
-      val res = reactApplicationContext.checkCallingOrSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-      if (res == PackageManager.PERMISSION_GRANTED) {
-        this.getImages(promise)
-      } else {
-        this.requestPermission()
-      }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>?, grantResults: IntArray?): Boolean {
-      if (requestCode == READ_EXTERNAL_STORAGE_REQUEST_CODE && grantResults != null) {
-        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-          this.openLibraryPromise.let { it
-            if (it != null) {
-              this.getImages(it)
+    private fun launchCamera() {
+      Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+        currentActivity.let { activity ->
+          if (activity != null) {
+            takePictureIntent.resolveActivity(activity.packageManager).also {
+              cameraCaptureFile = File(Environment.getExternalStorageDirectory(), "react-native-image-selector_" + UUID.randomUUID().toString() + ".jpg")
+              cameraCaptureFile.let { file ->
+                if (file != null) {
+                  cameraCaptureURI = FileProvider.getUriForFile(reactApplicationContext, StringBuilder(reactApplicationContext.packageName).append(".fileprovider").toString(), file)
+                  takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, cameraCaptureURI)
+                  this.globalCallback.let { callback ->
+                    if (callback != null) {
+                      reactApplicationContext.addActivityEventListener(ImageSelectorActivityListener(callback, reactApplicationContext))
+                      activity.startActivityForResult(takePictureIntent, IMAGE_CAPTURE_REQUEST_CODE)
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
+    }
+
+    private fun requestCameraPermission() {
+      val activity: PermissionAwareActivity = currentActivity as PermissionAwareActivity
+      activity.requestPermissions(arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE), CAMERA_PERMISSION_REQUEST_CODE, this)
+    }
+
+    private fun checkCameraPermission() {
+      currentActivity.let { it
+        if (it != null) {
+          val cameraResult = it.checkCallingOrSelfPermission(Manifest.permission.CAMERA)
+          val writeExternalStorageResult = it.checkCallingOrSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+          if (cameraResult == PackageManager.PERMISSION_GRANTED && writeExternalStorageResult == PackageManager.PERMISSION_GRANTED) {
+            this.launchCamera()
+          } else {
+            this.requestCameraPermission()
+          }
+        }
+      }
+    }
+
+    private fun launchLibrary() {
+      Intent(Intent.ACTION_GET_CONTENT).also { galleryIntent ->
+        galleryIntent.type = "image/*"
+        currentActivity.let { currentActivity ->
+          this.globalCallback.let { callback ->
+            if (callback != null) {
+              reactApplicationContext.addActivityEventListener(ImageSelectorActivityListener(callback, reactApplicationContext))
+              currentActivity?.startActivityForResult(galleryIntent, PICK_IMAGE_REQUEST_CODE)
+            }
+          }
+        }
+      }
+    }
+
+    private fun requestLibraryPermission() {
+      var activity: PermissionAwareActivity = currentActivity as PermissionAwareActivity
+      activity.requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), LIBRARY_PERMISSION_REQUEST_CODE, this)
+    }
+
+    private fun checkLibraryPermission() {
+      currentActivity.let { activity ->
+        if (activity != null) {
+          val libraryResult = activity.checkCallingOrSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+          if (libraryResult == PackageManager.PERMISSION_GRANTED) {
+            this.launchLibrary()
+          } else {
+            this.requestLibraryPermission()
+          }
+        }
+      }
+    }
+
+    @ReactMethod
+    fun launchPicker(callback: Callback) {
+      this.globalCallback = callback
+      currentActivity.let {
+        it
+        if (it != null) {
+          if (!it.isFinishing) {
+            val dialogBuilder = AlertDialog.Builder(it)
+              .setTitle("사진 선택")
+              .setItems(arrayOf("사진 촬영", "앨범에서 가져오기")) { dialog, which ->
+                if (which == 0) {
+                  this.checkCameraPermission()
+                }
+                if (which == 1) {
+                  this.checkLibraryPermission()
+                }
+              }
+              .setNeutralButton("취소", null)
+            dialogBuilder.show()
+          }
+        }
+      }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>?, grantResults: IntArray?): Boolean {
+      if (requestCode == CAMERA_PERMISSION_REQUEST_CODE && grantResults != null) {
+        if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+          this.launchCamera()
+        }
+      }
+
+      if (requestCode == LIBRARY_PERMISSION_REQUEST_CODE && grantResults != null) {
+        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+          this.launchLibrary()
+        }
+      }
       return true
     }
+
+  private class ImageSelectorActivityListener(callback: Callback, context: ReactApplicationContext): BaseActivityEventListener() {
+    private var callbackInvoker: Callback? = callback
+    private var context: ReactApplicationContext? = context
+
+    override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
+      super.onActivityResult(activity, requestCode, resultCode, data)
+      if (requestCode == IMAGE_CAPTURE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+        cameraCaptureFile.let { cameraCaptureFile ->
+          if (cameraCaptureFile != null) {
+            val uriString: String = "file://" + Uri.fromFile(cameraCaptureFile).path
+            val fileSize: Long = cameraCaptureFile.length()
+            val type: String = cameraCaptureFile.extension
+            val fileName: String = cameraCaptureFile.name
+            this.callbackInvoker.let { callback ->
+              if (callback != null) {
+                var response = Arguments.createMap()
+                response.putString("uri", uriString)
+                response.putDouble("fileSize", fileSize.toDouble())
+                response.putString("type", type)
+                response.putString("fileName", fileName)
+                callback.invoke(null, response)
+                this.callbackInvoker = null
+              }
+            }
+          }
+        }
+      }
+
+      if (requestCode == PICK_IMAGE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+        data.let { parsedData ->
+          if (parsedData != null) {
+            val uri = parsedData.data
+            uri.let { parsedUri ->
+              if (parsedUri != null) {
+                this.callbackInvoker.let { callback ->
+                  if (callback != null) {
+                    this.context.let { parsedContext ->
+                      if (parsedContext != null) {
+                        val cursor = parsedContext.contentResolver.query(parsedUri, null, null, null, null)
+                        if (cursor.moveToFirst()) {
+                          val sizeColumnIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                          val displayNameColumnIndex = cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
+                          val fileSize = cursor.getLong(sizeColumnIndex)
+                          val fileName = cursor.getString(displayNameColumnIndex)
+                          val realPath = "file://" + PathManager.getPathFromURI(parsedContext, parsedUri)
+                          var type = MimeTypeMap.getFileExtensionFromUrl(realPath)
+                          var response = Arguments.createMap()
+                          response.putString("uri", realPath)
+                          response.putDouble("fileSize", fileSize.toDouble())
+                          response.putString("type", type)
+                          response.putString("fileName", fileName)
+                          callback.invoke(null, response)
+                          this.callbackInvoker = null
+                          cursor.close()
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
+

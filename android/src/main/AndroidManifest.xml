@@ -1,4 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.reactnativeimageselector">
+  package="com.reactnativeimageselector">
+
+  <application>
+    <provider
+      android:authorities="com.example.reactnativeimageselector.fileprovider"
+      android:name="androidx.core.content.FileProvider"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_provider" />
+    </provider>
+  </application>
 
 </manifest>
