@@ -4,7 +4,7 @@
 
   <application>
     <provider
-      android:authorities="com.example.reactnativeimageselector.fileprovider"
+      android:authorities="${applicationId}.fileprovider"
       android:name="androidx.core.content.FileProvider"
       android:exported="false"
       android:grantUriPermissions="true">
