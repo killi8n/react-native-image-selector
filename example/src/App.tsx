@@ -36,6 +36,10 @@ export default function App() {
           return;
         }
         if (response) {
+          if (response.didCancel) {
+            console.log("USER CANCELLED")
+            return
+          }
           setResponse(response);
         }
       });

@@ -7,6 +7,7 @@ export interface ImageSelectorCallbackResponse {
   uri: string;
   data: string;
   path: string;
+  didCancel?: boolean;
 }
 
 export interface ImageSelectorOptions {

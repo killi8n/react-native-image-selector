@@ -68,9 +68,8 @@ class ImageShowerViewController: UIViewController {
         self.dismiss(animated: true) { [weak self] in
             guard let `self` = self else { return }
             if let callback = self.globalCallback {
-                callback([
-                    ["error": "USER_CANCEL"]
-                ])
+                let callbackResponse: [[String: Any]?] = [nil, ["didCancel": true]]
+                callback(callbackResponse as [Any])
             }
         }
     }

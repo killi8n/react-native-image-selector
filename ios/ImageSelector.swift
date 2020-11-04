@@ -197,9 +197,8 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
             self.checkLibraryPermission()
         }))
         alert.addAction(UIAlertAction(title: self.options["cancelButtonTitle"] as? String ?? "Cancel", style: .cancel, handler: { (_: UIAlertAction) in
-            callback([
-                ["error": "USER_CANCEL"]
-            ])
+            let callbackResponse: [[String: Any]?] = [nil, ["didCancel": true]]
+            callback(callbackResponse as [Any])
             self.globalCallback = nil
         }))
         DispatchQueue.main.async {
@@ -216,9 +215,8 @@ extension ImageSelector: UIImagePickerControllerDelegate {
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         guard let callback = self.globalCallback else { return }
         picker.dismiss(animated: true) {
-            callback([
-                ["error": "USER_CANCEL"]
-            ])
+            let callbackResponse: [[String: Any]?] = [nil, ["didCancel": true]]
+            callback(callbackResponse as [Any])
             self.globalCallback = nil
         }
     }

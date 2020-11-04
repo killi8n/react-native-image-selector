@@ -161,9 +161,9 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
               }
             }
             .setNeutralButton(cancelButtonTitle) { _, _ ->
-              val error = Arguments.createMap()
-              error.putString("error", "USER_CANCEL")
-              callback(error)
+              val response = Arguments.createMap()
+              response.putBoolean("didCancel", true)
+              callback(null, response)
               this.globalCallback = null
             }
           dialogBuilder.show()
@@ -179,9 +179,9 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
       } else {
         this.globalCallback.let { callback ->
           if (callback != null) {
-            val error = Arguments.createMap()
-            error.putString("error", "USER_CANCEL")
-            callback(error)
+            val response = Arguments.createMap()
+            response.putBoolean("didCancel", true)
+            callback(null, response)
             this.globalCallback = null
           }
         }
@@ -194,9 +194,9 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
       } else {
         this.globalCallback.let { callback ->
           if (callback != null) {
-            val error = Arguments.createMap()
-            error.putString("error", "USER_CANCEL")
-            callback(error)
+            val response = Arguments.createMap()
+            response.putBoolean("didCancel", true)
+            callback(null, response)
             this.globalCallback = null
           }
         }
@@ -227,74 +227,89 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
 
     override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
       super.onActivityResult(activity, requestCode, resultCode, data)
-      if (requestCode == IMAGE_CAPTURE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-        cameraCaptureFile.let { cameraCaptureFile ->
-          if (cameraCaptureFile != null) {
-            val path: String? = Uri.fromFile(cameraCaptureFile).path
-            val uriString = "file://$path"
-            val fileSize: Long = cameraCaptureFile.length()
-            val type: String = cameraCaptureFile.extension
-            val fileName: String = cameraCaptureFile.name
-            var base64EncodedString: String? = null
-            path.let { parsedPath ->
-              if (parsedPath != null) {
-                base64EncodedString = this.encodeImage(parsedPath)
+//      resultCode == Activity.RESULT_CANCELED
+      if (requestCode == IMAGE_CAPTURE_REQUEST_CODE) {
+        if (resultCode == Activity.RESULT_OK) {
+          cameraCaptureFile.let { cameraCaptureFile ->
+            if (cameraCaptureFile != null) {
+              val path: String? = Uri.fromFile(cameraCaptureFile).path
+              val uriString = "file://$path"
+              val fileSize: Long = cameraCaptureFile.length()
+              val type: String = cameraCaptureFile.extension
+              val fileName: String = cameraCaptureFile.name
+              var base64EncodedString: String? = null
+              path.let { parsedPath ->
+                if (parsedPath != null) {
+                  base64EncodedString = this.encodeImage(parsedPath)
+                }
+              }
+              this.callbackInvoker.let { callback ->
+                if (callback != null) {
+                  val response = Arguments.createMap()
+                  response.putString("path", path)
+                  response.putString("uri", uriString)
+                  response.putDouble("fileSize", fileSize.toDouble())
+                  response.putString("type", "image/$type")
+                  response.putString("fileName", fileName)
+                  response.putString("data", base64EncodedString)
+                  callback.invoke(null, response)
+                  this.callbackInvoker = null
+                }
               }
             }
-            this.callbackInvoker.let { callback ->
-              if (callback != null) {
-                val response = Arguments.createMap()
-                response.putString("path", path)
-                response.putString("uri", uriString)
-                response.putDouble("fileSize", fileSize.toDouble())
-                response.putString("type", "image/$type")
-                response.putString("fileName", fileName)
-                response.putString("data", base64EncodedString)
-                callback.invoke(null, response)
-                this.callbackInvoker = null
-              }
+          }
+        }
+        if (resultCode == Activity.RESULT_CANCELED) {
+          this.callbackInvoker.let { callback ->
+            if (callback != null) {
+              val response = Arguments.createMap()
+              response.putBoolean("didCancel", true)
+              callback.invoke(null, response)
+              this.callbackInvoker = null
             }
           }
         }
       }
 
-      if (requestCode == PICK_IMAGE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-        data.let { parsedData ->
-          if (parsedData != null) {
-            val uri = parsedData.data
-            uri.let { parsedUri ->
-              if (parsedUri != null) {
-                this.callbackInvoker.let { callback ->
-                  if (callback != null) {
-                    this.context.let { parsedContext ->
-                      if (parsedContext != null) {
-                        val cursor = parsedContext.contentResolver.query(parsedUri, null, null, null, null)
-                        cursor.let { parsedCursor ->
-                          if (parsedCursor != null) {
-                            if (parsedCursor.moveToFirst()) {
-                              val sizeColumnIndex = parsedCursor.getColumnIndex(OpenableColumns.SIZE)
-                              val displayNameColumnIndex = parsedCursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
-                              val fileSize = parsedCursor.getLong(sizeColumnIndex)
-                              val fileName = parsedCursor.getString(displayNameColumnIndex)
-                              val path = PathManager.getPathFromURI(parsedContext, parsedUri)
-                              val uriString = "file://$path"
-                              val type = MimeTypeMap.getFileExtensionFromUrl(uriString)
-                              var base64EncodedString: String? = null
-                              path.let { parsedPath ->
-                                if (parsedPath != null) {
-                                  base64EncodedString = this.encodeImage(parsedPath)
+      if (requestCode == PICK_IMAGE_REQUEST_CODE) {
+        if (resultCode == Activity.RESULT_OK) {
+          data.let { parsedData ->
+            if (parsedData != null) {
+              val uri = parsedData.data
+              uri.let { parsedUri ->
+                if (parsedUri != null) {
+                  this.callbackInvoker.let { callback ->
+                    if (callback != null) {
+                      this.context.let { parsedContext ->
+                        if (parsedContext != null) {
+                          val cursor = parsedContext.contentResolver.query(parsedUri, null, null, null, null)
+                          cursor.let { parsedCursor ->
+                            if (parsedCursor != null) {
+                              if (parsedCursor.moveToFirst()) {
+                                val sizeColumnIndex = parsedCursor.getColumnIndex(OpenableColumns.SIZE)
+                                val displayNameColumnIndex = parsedCursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
+                                val fileSize = parsedCursor.getLong(sizeColumnIndex)
+                                val fileName = parsedCursor.getString(displayNameColumnIndex)
+                                val path = PathManager.getPathFromURI(parsedContext, parsedUri)
+                                val uriString = "file://$path"
+                                val type = MimeTypeMap.getFileExtensionFromUrl(uriString)
+                                var base64EncodedString: String? = null
+                                path.let { parsedPath ->
+                                  if (parsedPath != null) {
+                                    base64EncodedString = this.encodeImage(parsedPath)
+                                  }
                                 }
+                                val response = Arguments.createMap()
+                                response.putString("path", path)
+                                response.putString("uri", uriString)
+                                response.putDouble("fileSize", fileSize.toDouble())
+                                response.putString("type", "image/$type")
+                                response.putString("fileName", fileName)
+                                response.putString("data", base64EncodedString)
+                                callback.invoke(null, response)
+                                this.callbackInvoker = null
+                                parsedCursor.close()
                               }
-                              val response = Arguments.createMap()
-                              response.putString("path", path)
-                              response.putString("uri", uriString)
-                              response.putDouble("fileSize", fileSize.toDouble())
-                              response.putString("type", "image/$type")
-                              response.putString("fileName", fileName)
-                              response.putString("data", base64EncodedString)
-                              callback.invoke(null, response)
-                              this.callbackInvoker = null
-                              parsedCursor.close()
                             }
                           }
                         }
@@ -303,6 +318,17 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
                   }
                 }
               }
+            }
+          }
+        }
+
+        if (resultCode == Activity.RESULT_CANCELED) {
+          this.callbackInvoker.let { callback ->
+            if (callback != null) {
+              val response = Arguments.createMap()
+              response.putBoolean("didCancel", true)
+              callback.invoke(null, response)
+              this.callbackInvoker = null
             }
           }
         }
