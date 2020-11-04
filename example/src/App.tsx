@@ -2,7 +2,26 @@ import * as React from 'react';
 import { StyleSheet, Button, SafeAreaView, Image, Text } from 'react-native';
 import ImageSelector, {
   ImageSelectorCallbackResponse,
+  ImageSelectorOptions,
 } from 'react-native-image-selector';
+
+const options: ImageSelectorOptions = {
+  // import Options
+  storageOptions: {
+    skipBackup: true,
+    path: 'hello',
+  },
+  permissionDenied: {
+    title: '권한 설정',
+    text: "이 기능을 이용하시려면 권한을 '허용'으로 변경해주세요.",
+    reTryTitle: '변경하러가기',
+    okTitle: '닫기',
+  },
+  title: '사진 선택',
+  cancelButtonTitle: '취소',
+  takePhotoButtonTitle: '사진 촬영',
+  chooseFromLibraryButtonTitle: '앨범에서 가져오기',
+};
 
 export default function App() {
   const [
@@ -11,15 +30,15 @@ export default function App() {
   ] = React.useState<ImageSelectorCallbackResponse | null>(null);
   const handlePhotos = async () => {
     try {
-      ImageSelector.launchPicker(
-        (error, response: ImageSelectorCallbackResponse) => {
-          if (error) {
-            console.log(error);
-            return;
-          }
+      ImageSelector.launchPicker(options, (error, response) => {
+        if (error) {
+          console.log(error);
+          return;
+        }
+        if (response) {
           setResponse(response);
         }
-      );
+      });
     } catch (e) {
       console.error(e);
     }
