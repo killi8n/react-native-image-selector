@@ -36,6 +36,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
   }
 
   private var globalCallback: Callback? = null
+  private var options: ReadableMap? = null
 
 
   override fun getName(): String {
@@ -118,15 +119,40 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
   }
 
   @ReactMethod
-  fun launchPicker(callback: Callback) {
+  fun launchPicker(options: ReadableMap?, callback: Callback) {
+    this.options = options
     this.globalCallback = callback
+
+    var title: String? = "Pick Photos"
+    var takePhotoButtonTitle: String? = "Take Photos"
+    var chooseFromLibraryButtonTitle: String? = "Open Photo Gallery"
+    var cancelButtonTitle: String? = "Cancel"
+
+    this.options.let { option ->
+      if (option != null) {
+        if (option.getString("title") != null) {
+          title = option.getString("title")
+        }
+        if (option.getString("takePhotoButtonTitle") != null) {
+          takePhotoButtonTitle = option.getString("takePhotoButtonTitle")
+        }
+        if (option.getString("chooseFromLibraryButtonTitle") != null) {
+          chooseFromLibraryButtonTitle = option.getString("chooseFromLibraryButtonTitle")
+        }
+        if (option.getString("cancelButtonTitle") != null) {
+          cancelButtonTitle = option.getString("cancelButtonTitle")
+        }
+      }
+    }
+
+
     currentActivity.let {
       it
       if (it != null) {
         if (!it.isFinishing) {
           val dialogBuilder = AlertDialog.Builder(it)
-            .setTitle("사진 선택")
-            .setItems(arrayOf("사진 촬영", "앨범에서 가져오기")) { _, which ->
+            .setTitle(title)
+            .setItems(arrayOf(takePhotoButtonTitle, chooseFromLibraryButtonTitle)) { _, which ->
               if (which == 0) {
                 this.checkCameraPermission()
               }
@@ -134,9 +160,9 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
                 this.checkLibraryPermission()
               }
             }
-            .setNeutralButton("취소") { _, _ ->
+            .setNeutralButton(cancelButtonTitle) { _, _ ->
               val error = Arguments.createMap()
-              error.putString("error", "USER_CACNEL")
+              error.putString("error", "USER_CANCEL")
               callback(error)
               this.globalCallback = null
             }
@@ -154,7 +180,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
         this.globalCallback.let { callback ->
           if (callback != null) {
             val error = Arguments.createMap()
-            error.putString("error", "USER_CACNEL")
+            error.putString("error", "USER_CANCEL")
             callback(error)
             this.globalCallback = null
           }
@@ -169,7 +195,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
         this.globalCallback.let { callback ->
           if (callback != null) {
             val error = Arguments.createMap()
-            error.putString("error", "USER_CACNEL")
+            error.putString("error", "USER_CANCEL")
             callback(error)
             this.globalCallback = null
           }
