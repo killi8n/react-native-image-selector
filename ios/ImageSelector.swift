@@ -1,6 +1,5 @@
 import AVKit
 import Photos
-import PhotosUI
 
 class EventEmitter {
 
@@ -184,28 +183,6 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
             }
         }
     }
-    
-    static func createCacheFile(imageData: Data) -> [String: Any] {
-        let fileName: String = "react-native-image-selector_\(UUID().uuidString).png"
-        let paths = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)
-        let path = paths.first ?? ""
-        let filePath = "\(path)/\(fileName)"
-        if !FileManager.default.fileExists(atPath: filePath) {
-            FileManager.default.createFile(atPath: filePath, contents: imageData, attributes: nil)
-        }
-        return ["uri": "file://\(filePath)", "fileName": fileName, "type": "image/png", "fileSize": imageData.count]
-    }
-    
-    static func rotateImage(image: UIImage) -> UIImage? {
-        if image.imageOrientation == .up {
-            return image
-        }
-        UIGraphicsBeginImageContext(image.size)
-        image.draw(in: CGRect(origin: CGPoint.zero, size: image.size))
-        let copy = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return copy
-    }
 }
 
 
@@ -225,9 +202,9 @@ extension ImageSelector: UIImagePickerControllerDelegate {
         switch picker.sourceType {
             case .camera:
                 if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-                    if let rotatedImage = ImageSelector.rotateImage(image: pickedImage) {
+                    if let rotatedImage = ImageUtil.rotateImage(image: pickedImage) {
                         if let imageData = rotatedImage.pngData() {
-                            let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
+                            let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData)
                             response = fileCreateResult
                         }
                     }
@@ -236,7 +213,7 @@ extension ImageSelector: UIImagePickerControllerDelegate {
             case .photoLibrary, .savedPhotosAlbum:
                 if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
                     if let imageData = pickedImage.pngData() {
-                        let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
+                        let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData)
                         response = fileCreateResult
                     }
                 }
@@ -252,7 +229,8 @@ extension ImageSelector: UIImagePickerControllerDelegate {
                 self.globalCallback = nil
                 return
             }
-            callback([nil, response])
+            let callbackResponse: [[String: Any]?] = [nil, response]
+            callback(callbackResponse as [Any])
             self.globalCallback = nil
         }
     }
@@ -270,150 +248,3 @@ extension ImageSelector: PHPhotoLibraryChangeObserver {
         }
     }
 }
-
-class ImageShowerViewController: UIViewController {
-    public var fetchedAssets: PHFetchResult<PHAsset>?
-    public lazy var collectionView: UICollectionView = {
-        self.layout.scrollDirection = .vertical
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: self.layout)
-        cv.register(ImageShowerCell.self, forCellWithReuseIdentifier: self.reusableIdentifier)
-        cv.backgroundColor = .white
-        cv.delegate = self
-        cv.dataSource = self
-        return cv
-    }()
-    private var globalCallback: RCTResponseSenderBlock?
-    private let layout = UICollectionViewFlowLayout()
-    private let reusableIdentifier: String = "cell"
-    
-    init(fetchedAssets: PHFetchResult<PHAsset>, callback: @escaping RCTResponseSenderBlock) {
-        super.init(nibName: nil, bundle: nil)
-        self.fetchedAssets = fetchedAssets
-        self.globalCallback = callback
-        self.title = "모든 사진"
-        let cancelBarButtonItem: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(self.dismissViewController(_:)))
-        self.navigationItem.rightBarButtonItem = cancelBarButtonItem
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        self.view.backgroundColor = .white
-        self.view.addSubview(self.collectionView)
-        self.collectionView.translatesAutoresizingMaskIntoConstraints = false
-        let topAnchor = self.collectionView.topAnchor.constraint(equalTo: self.view.topAnchor)
-        let leftAnchor = self.collectionView.leftAnchor.constraint(equalTo: self.view.leftAnchor)
-        let bottomAnchor = self.collectionView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
-        let rightAnchor = self.collectionView.rightAnchor.constraint(equalTo: self.view.rightAnchor)
-        self.view.addConstraints([topAnchor, leftAnchor, bottomAnchor, rightAnchor])
-    }
-    
-    @objc
-    func dismissViewController(_ sender: UIBarButtonItem) {
-        self.dismiss(animated: true, completion: nil)
-    }
-}
-
-class ImageShowerCell: UICollectionViewCell {
-    let cellImageView: UIImageView = {
-        let imageView = UIImageView(frame: .zero)
-        imageView.contentMode = .scaleAspectFill
-        imageView.layer.masksToBounds = true
-        return imageView
-    }()
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        self.contentView.backgroundColor = .groupTableViewBackground
-        self.contentView.addSubview(self.cellImageView)
-        self.cellImageView.translatesAutoresizingMaskIntoConstraints = false
-        let topAnchor = self.cellImageView.topAnchor.constraint(equalTo: self.contentView.topAnchor)
-        let leftAnchor = self.cellImageView.leftAnchor.constraint(equalTo: self.contentView.leftAnchor)
-        let bottomAnchor = self.cellImageView.bottomAnchor.constraint(equalTo: self.contentView.bottomAnchor)
-        let rightAnchor = self.cellImageView.rightAnchor.constraint(equalTo: self.contentView.rightAnchor)
-        self.contentView.addConstraints([topAnchor, leftAnchor, bottomAnchor, rightAnchor])
-    }
-
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func prepareForReuse() {
-        self.cellImageView.image = nil
-    }
-    
-    func fetchImage(asset: PHAsset) -> Void {
-        let manager = PHImageManager.default()
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .opportunistic
-        options.isSynchronous = true
-        options.resizeMode = .exact
-        manager.requestImage(for: asset, targetSize: CGSize(width: self.contentView.frame.size.width, height: self.contentView.frame.size.height), contentMode: .aspectFill, options: options) { [weak self] (image: UIImage?, info: [AnyHashable : Any]?) in
-            guard let `self` = self else { return }
-            if let image = image {
-                self.cellImageView.image = image
-                return
-            }
-        }
-    }
-}
-
-extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        guard let assets = self.fetchedAssets else { return 0 }
-        return assets.count
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: self.reusableIdentifier, for: indexPath) as? ImageShowerCell else { return UICollectionViewCell() }
-        guard let assets = self.fetchedAssets else { return cell }
-        let asset = assets.object(at: indexPath.item)
-        DispatchQueue.main.async {
-            cell.fetchImage(asset: asset)
-        }
-        return cell
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.layer.frame.width / 3 - 2, height: collectionView.layer.frame.height / 6.5)
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
-        return 2
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
-        return 4
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
-        return UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard let assets = self.fetchedAssets else { return }
-        let asset = assets.object(at: indexPath.item)
-        let manager = PHImageManager.default()
-        let options = PHImageRequestOptions()
-        options.version = .original
-        options.isSynchronous = true
-        manager.requestImageData(for: asset, options: options) { [weak self] (imageData: Data?, _: String?, _: UIImage.Orientation, _: [AnyHashable : Any]?) in
-            guard let `self` = self else { return }
-            if let imageData = imageData {
-                let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
-                self.dismiss(animated: true) {
-                    guard let callback = self.globalCallback else { return }
-                    callback([
-                        nil,
-                        fileCreateResult
-                    ])
-                    self.globalCallback = nil
-                }
-            }
-        }
-    }
-}
-
