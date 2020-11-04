@@ -39,6 +39,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
     private var fetchedAssets: PHFetchResult<PHAsset> = PHFetchResult<PHAsset>()
     private var globalCallback: RCTResponseSenderBlock?
     private var imageShowerViewController: ImageShowerViewController?
+    private var options: [String: Any] = [:]
     
     override init() {
         super.init()
@@ -129,7 +130,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
         let fetchOptions = PHFetchOptions()
         fetchOptions.includeAssetSourceTypes = .typeUserLibrary
         self.fetchedAssets = PHAsset.fetchAssets(with: .image, options: fetchOptions)
-        self.imageShowerViewController = ImageShowerViewController(fetchedAssets: self.fetchedAssets, callback: callback)
+        self.imageShowerViewController = ImageShowerViewController(fetchedAssets: self.fetchedAssets, options: self.options, callback: callback)
         guard let imageShowerViewController = self.imageShowerViewController else { return }
         PHPhotoLibrary.shared().register(self)
         DispatchQueue.main.async {
@@ -151,11 +152,36 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
         }
     }
     
+    func parseOptions(options: [String: Any]?) -> Void {
+        if let options = options {
+            if let title = options["title"] {
+                self.options["title"] = title
+            }
+            if let cancelButtonTitle = options["cancelButtonTitle"] {
+                self.options["cancelButtonTitle"] = cancelButtonTitle
+            }
+            if let takePhotoButtonTitle = options["takePhotoButtonTitle"] {
+                self.options["takePhotoButtonTitle"] = takePhotoButtonTitle
+            }
+            if let chooseFromLibraryButtonTitle = options["chooseFromLibraryButtonTitle"] {
+                self.options["chooseFromLibraryButtonTitle"] = chooseFromLibraryButtonTitle
+            }
+            if let storageOptions = options["storageOptions"] as? [String: Any] {
+                self.options["storageOptions"] = storageOptions
+            }
+            if let permissionDenied = options["permissionDenied"] {
+                self.options["permissionDenied"] = permissionDenied
+            }
+        }
+    }
+    
     @objc
-    func launchPicker(_ callback: @escaping RCTResponseSenderBlock) -> Void {
+    func launchPicker(_ options: [String: Any]?, responseCallback callback: @escaping RCTResponseSenderBlock) -> Void {
         self.globalCallback = callback
-        let alert = UIAlertController(title: "사진 선택", message: nil, preferredStyle: .actionSheet)
-        alert.addAction(UIAlertAction(title: "사진 촬영", style: .default, handler: { [weak self] (_: UIAlertAction) in
+        self.parseOptions(options: options)
+        
+        let alert = UIAlertController(title: self.options["title"] as? String ?? "Pick Photos", message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: self.options["takePhotoButtonTitle"] as? String ?? "Take Photos", style: .default, handler: { [weak self] (_: UIAlertAction) in
             guard let `self` = self else { return }
             #if targetEnvironment(simulator)
                 callback([
@@ -166,11 +192,11 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                 self.checkCameraPermission()
             #endif
         }))
-        alert.addAction(UIAlertAction(title: "앨범에서 가져오기", style: .default, handler: { [weak self] (_: UIAlertAction) in
+        alert.addAction(UIAlertAction(title: self.options["chooseFromLibraryButtonTitle"] as? String ?? "Open Photo Gallery", style: .default, handler: { [weak self] (_: UIAlertAction) in
             guard let `self` = self else { return }
             self.checkLibraryPermission()
         }))
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel, handler: { (_: UIAlertAction) in
+        alert.addAction(UIAlertAction(title: self.options["cancelButtonTitle"] as? String ?? "Cancel", style: .cancel, handler: { (_: UIAlertAction) in
             callback([
                 ["error": "USER_CANCEL"]
             ])
@@ -204,19 +230,21 @@ extension ImageSelector: UIImagePickerControllerDelegate {
                 if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
                     if let rotatedImage = ImageUtil.rotateImage(image: pickedImage) {
                         if let imageData = rotatedImage.pngData() {
-                            let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData)
+                            var pathDirectory: String? = nil
+                            if let storageOptions = self.options["storageOptions"] as? [String: Any] {
+                                if let path = storageOptions["path"] as? String {
+                                    pathDirectory = path
+                                }
+                            }
+                            let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData, pathDirectory: pathDirectory, callback: self.globalCallback)
                             response = fileCreateResult
                         }
                     }
                 }
                 break
             case .photoLibrary, .savedPhotosAlbum:
-                if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-                    if let imageData = pickedImage.pngData() {
-                        let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData)
-                        response = fileCreateResult
-                    }
-                }
+//                이부분은 collection view 로 띄워서 pick하는 걸로 대체하였습니다.
+//                this part would be unnecessary, because we will show the collection view instead of native image picker view controller.
                 break
             default:
                 break

@@ -9,23 +9,34 @@
 import UIKit
 
 class ImageUtil: NSObject {
-    static func createCacheFile(imageData: Data) -> [String: Any] {
-        let fileName: String = "react-native-image-selector_\(UUID().uuidString).png"
-        let paths = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)
-        let path = paths.first ?? ""
-        let filePath = "\(path)/\(fileName)"
-        if !FileManager.default.fileExists(atPath: filePath) {
-            FileManager.default.createFile(atPath: filePath, contents: imageData, attributes: nil)
+    static func createCacheFile(imageData: Data, pathDirectory: String?, callback: RCTResponseSenderBlock?) -> [String: Any]? {
+        let fileManager = FileManager.default
+        if let documentDirectoryPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first {
+            let path = (documentDirectoryPath as NSString).appendingPathComponent(pathDirectory ?? "")
+            do {
+                try fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                if let callback = callback {
+                    let callbackResponse: [[String: Any]?] = [["error": "FILE_CREATE_ERROR"]]
+                    callback(callbackResponse as [Any])
+                }
+                return nil
+            }
+            let uuid: String = UUID().uuidString
+            let fileName = (uuid as NSString).appendingPathExtension("png") ?? "\(uuid).png"
+            let filePath = (path as NSString).appendingPathComponent(fileName)
+            fileManager.createFile(atPath: filePath, contents: imageData, attributes: nil)
+            let base64EncodedString: String = imageData.base64EncodedString()
+            return [
+                "data": base64EncodedString,
+                "path": filePath,
+                "uri": "file://\(filePath)",
+                "fileName": fileName,
+                "type": "image/png",
+                "fileSize": imageData.count
+            ]
         }
-        let base64EncodedString: String = imageData.base64EncodedString()
-        return [
-            "data": base64EncodedString,
-            "path": filePath,
-            "uri": "file://\(filePath)",
-            "fileName": fileName,
-            "type": "image/png",
-            "fileSize": imageData.count
-        ]
+        return nil
     }
     
     static func rotateImage(image: UIImage) -> UIImage? {

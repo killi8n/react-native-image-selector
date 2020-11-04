@@ -23,12 +23,18 @@ class ImageShowerViewController: UIViewController {
     private var globalCallback: RCTResponseSenderBlock?
     private let layout = UICollectionViewFlowLayout()
     private let reusableIdentifier: String = "cell"
+    private var options: [String: Any] = [:]
     
-    init(fetchedAssets: PHFetchResult<PHAsset>, callback: @escaping RCTResponseSenderBlock) {
+    init(fetchedAssets: PHFetchResult<PHAsset>, options: [String: Any], callback: @escaping RCTResponseSenderBlock) {
         super.init(nibName: nil, bundle: nil)
         self.fetchedAssets = fetchedAssets
+        self.options = options
         self.globalCallback = callback
-        self.title = "모든 사진"
+        if let title = options["title"] as? String {
+            self.title = title
+        } else {
+            self.title = "Choose Photo"
+        }
         let cancelBarButtonItem: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(self.dismissViewController(_:)))
         self.navigationItem.rightBarButtonItem = cancelBarButtonItem
     }
@@ -112,7 +118,13 @@ extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UIColle
         manager.requestImageData(for: asset, options: options) { [weak self] (imageData: Data?, _: String?, _: UIImage.Orientation, _: [AnyHashable : Any]?) in
             guard let `self` = self else { return }
             if let imageData = imageData {
-                let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData)
+                var pathDirectory: String? = nil
+                if let storageOptions = self.options["storageOptions"] as? NSDictionary {
+                    if let path = storageOptions.value(forKey: "path") as? String {
+                        pathDirectory = path
+                    }
+                }
+                let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData, pathDirectory: pathDirectory, callback: self.globalCallback)
                 self.dismiss(animated: true) {
                     guard let callback = self.globalCallback else { return }
                     let callbackResponse: [[String: Any]?] = [
