@@ -7,9 +7,6 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
-
-import androidx.annotation.RequiresApi;
-
 import com.facebook.react.bridge.ReactContext;
 
 public class PathManager {

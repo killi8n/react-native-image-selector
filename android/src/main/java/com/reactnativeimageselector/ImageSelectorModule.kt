@@ -5,16 +5,22 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.util.Base64
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.util.*
 
 
@@ -120,7 +126,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
         if (!it.isFinishing) {
           val dialogBuilder = AlertDialog.Builder(it)
             .setTitle("사진 선택")
-            .setItems(arrayOf("사진 촬영", "앨범에서 가져오기")) { dialog, which ->
+            .setItems(arrayOf("사진 촬영", "앨범에서 가져오기")) { _, which ->
               if (which == 0) {
                 this.checkCameraPermission()
               }
@@ -128,12 +134,12 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
                 this.checkLibraryPermission()
               }
             }
-            .setNeutralButton("취소", { dialog, which ->
+            .setNeutralButton("취소") { _, _ ->
               val error = Arguments.createMap()
               error.putString("error", "USER_CACNEL")
               callback(error)
               this.globalCallback = null
-            })
+            }
           dialogBuilder.show()
         }
       }
@@ -177,22 +183,47 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     private var callbackInvoker: Callback? = callback
     private var context: ReactApplicationContext? = context
 
+    private fun encodeImage(path: String): String? {
+      val imagefile = File(path)
+      var fis: FileInputStream? = null
+      try {
+        fis = FileInputStream(imagefile)
+      } catch (e: FileNotFoundException) {
+        e.printStackTrace()
+      }
+      val bm = BitmapFactory.decodeStream(fis)
+      val baos = ByteArrayOutputStream()
+      bm.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+      val b: ByteArray = baos.toByteArray()
+      //Base64.de
+      return Base64.encodeToString(b, Base64.NO_WRAP)
+    }
+
     override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
       super.onActivityResult(activity, requestCode, resultCode, data)
       if (requestCode == IMAGE_CAPTURE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
         cameraCaptureFile.let { cameraCaptureFile ->
           if (cameraCaptureFile != null) {
-            val uriString: String = "file://" + Uri.fromFile(cameraCaptureFile).path
+            val path: String? = Uri.fromFile(cameraCaptureFile).path
+            val uriString = "file://$path"
             val fileSize: Long = cameraCaptureFile.length()
             val type: String = cameraCaptureFile.extension
             val fileName: String = cameraCaptureFile.name
+            var base64EncodedString: String? = null
+            path.let { parsedPath ->
+              if (parsedPath != null) {
+                base64EncodedString = this.encodeImage(parsedPath)
+              }
+            }
             this.callbackInvoker.let { callback ->
               if (callback != null) {
-                var response = Arguments.createMap()
+                val response = Arguments.createMap()
+                response.putString("path", path)
                 response.putString("uri", uriString)
                 response.putDouble("fileSize", fileSize.toDouble())
-                response.putString("type", "image/" + type)
+                response.putString("type", "image/$type")
                 response.putString("fileName", fileName)
+                response.putString("data", base64EncodedString)
                 callback.invoke(null, response)
                 this.callbackInvoker = null
               }
@@ -219,13 +250,22 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
                               val displayNameColumnIndex = parsedCursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
                               val fileSize = parsedCursor.getLong(sizeColumnIndex)
                               val fileName = parsedCursor.getString(displayNameColumnIndex)
-                              val realPath = "file://" + PathManager.getPathFromURI(parsedContext, parsedUri)
-                              var type = MimeTypeMap.getFileExtensionFromUrl(realPath)
-                              var response = Arguments.createMap()
-                              response.putString("uri", realPath)
+                              val path = PathManager.getPathFromURI(parsedContext, parsedUri)
+                              val uriString = "file://$path"
+                              val type = MimeTypeMap.getFileExtensionFromUrl(uriString)
+                              var base64EncodedString: String? = null
+                              path.let { parsedPath ->
+                                if (parsedPath != null) {
+                                  base64EncodedString = this.encodeImage(parsedPath)
+                                }
+                              }
+                              val response = Arguments.createMap()
+                              response.putString("path", path)
+                              response.putString("uri", uriString)
                               response.putDouble("fileSize", fileSize.toDouble())
-                              response.putString("type", "image/" + type)
+                              response.putString("type", "image/$type")
                               response.putString("fileName", fileName)
+                              response.putString("data", base64EncodedString)
                               callback.invoke(null, response)
                               this.callbackInvoker = null
                               parsedCursor.close()
