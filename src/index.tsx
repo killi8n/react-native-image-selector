@@ -5,6 +5,8 @@ export interface ImageSelectorCallbackResponse {
   fileName: string;
   type: string;
   uri: string;
+  data: string;
+  path: string;
 }
 
 type ImageSelectorType = {
