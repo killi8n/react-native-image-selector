@@ -27,11 +27,24 @@ export interface ImageSelectorOptions {
   };
 }
 
+interface ImageSelectorError {
+  code: number;
+  message: string;
+}
+
+export enum ImageSelectorErrorType {
+  CAMERA_PERMISSION_DENIED = 100,
+  LIBRARY_PERMISSION_DENIED = 101,
+  SIMULATOR_ERROR = 102,
+  SOURCE_TYPE_MISMATCH = 103,
+  FILE_CREATE_ERROR = 104,
+}
+
 type ImageSelectorType = {
   launchPicker: (
     options: ImageSelectorOptions,
     callback: (
-      error: { error: string },
+      error: ImageSelectorError,
       response?: ImageSelectorCallbackResponse
     ) => void
   ) => void;

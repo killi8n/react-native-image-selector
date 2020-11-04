@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Button, SafeAreaView, Image, Text } from 'react-native';
 import ImageSelector, {
   ImageSelectorCallbackResponse,
+  ImageSelectorErrorType,
   ImageSelectorOptions,
 } from 'react-native-image-selector';
 
@@ -33,6 +34,9 @@ export default function App() {
       ImageSelector.launchPicker(options, (error, response) => {
         if (error) {
           console.log(error);
+          if (error.code === ImageSelectorErrorType.CAMERA_PERMISSION_DENIED) {
+            console.error('camera permission denied');
+          }
           return;
         }
         if (response) {

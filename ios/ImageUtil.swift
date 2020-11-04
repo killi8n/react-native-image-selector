@@ -17,7 +17,7 @@ class ImageUtil: NSObject {
                 try fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
             } catch {
                 if let callback = callback {
-                    let callbackResponse: [[String: Any]?] = [["error": "FILE_CREATE_ERROR"]]
+                    let callbackResponse: [[String: Any]?] = [["code": ErrorCode.fileCreateError, "message": ErrorMessage.fileCreateError]]
                     callback(callbackResponse as [Any])
                 }
                 return nil

@@ -1,38 +1,54 @@
 import AVKit
 import Photos
 
-class EventEmitter {
+//class EventEmitter {
+//
+//    /// Shared Instance.
+//    public static var sharedInstance = EventEmitter()
+//
+//    // ReactNativeEventEmitter is instantiated by React Native with the bridge.
+//    private static var eventEmitter: RCTEventEmitter!
+//
+//    private init() {}
+//
+//    // When React Native instantiates the emitter it is registered here.
+//    func registerEventEmitter(eventEmitter: RCTEventEmitter) {
+//        EventEmitter.eventEmitter = eventEmitter
+//    }
+//
+//    func dispatch(name: String, body: Any?) {
+//        EventEmitter.eventEmitter.sendEvent(withName: name, body: body)
+//    }
+//
+//    /// All Events which must be support by React Native.
+//    lazy var allEvents: [String] = {
+//        var allEventNames: [String] = ["DidSelectItem"]
+//
+//        // Append all events here
+//
+//        return allEventNames
+//    }()
+//
+//}
 
-    /// Shared Instance.
-    public static var sharedInstance = EventEmitter()
+struct ErrorCode {
+    static let cameraPermissionDenied: Int = 100
+    static let libraryPermissionDenied: Int = 101
+    static let simulatorError: Int = 102
+    static let sourceTypeMismatch: Int = 103
+    static let fileCreateError: Int = 104
+}
 
-    // ReactNativeEventEmitter is instantiated by React Native with the bridge.
-    private static var eventEmitter: RCTEventEmitter!
-
-    private init() {}
-
-    // When React Native instantiates the emitter it is registered here.
-    func registerEventEmitter(eventEmitter: RCTEventEmitter) {
-        EventEmitter.eventEmitter = eventEmitter
-    }
-
-    func dispatch(name: String, body: Any?) {
-        EventEmitter.eventEmitter.sendEvent(withName: name, body: body)
-    }
-
-    /// All Events which must be support by React Native.
-    lazy var allEvents: [String] = {
-        var allEventNames: [String] = ["DidSelectItem"]
-
-        // Append all events here
-        
-        return allEventNames
-    }()
-
+struct ErrorMessage {
+    static let cameraPermissionDenied: String = "CAMERA_PERMISSION_DENIED"
+    static let libraryPermissionDenied: String = "LIBRARY_PERMISSION_DENIED"
+    static let simulatorError: String = "SIMULATOR_ERROR"
+    static let sourceTypeMismatch: String = "SOURCE_TYPE_MISMATCH"
+    static let fileCreateError: String = "FILE_CREATE_ERROR"
 }
 
 @objc(ImageSelector)
-class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
+class ImageSelector: NSObject, UINavigationControllerDelegate {
     
     let imagePickerController: UIImagePickerController = UIImagePickerController()
     
@@ -43,12 +59,12 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
     
     override init() {
         super.init()
-        EventEmitter.sharedInstance.registerEventEmitter(eventEmitter: self)
+//        EventEmitter.sharedInstance.registerEventEmitter(eventEmitter: self)
     }
     
-    override func supportedEvents() -> [String]! {
-        return EventEmitter.sharedInstance.allEvents
-    }
+//    override func supportedEvents() -> [String]! {
+//        return EventEmitter.sharedInstance.allEvents
+//    }
     
     func requestCameraAuthorization() -> Void {
         AVCaptureDevice.requestAccess(for: .video) { [weak self] (isAuthorized: Bool) in
@@ -57,7 +73,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
             if isAuthorized {
                 self.launchCamera()
             } else {
-                let error = ["error": "CAMERA_PERMISSION_DENIED"]
+                let error: [String: Any] = ["code": ErrorCode.cameraPermissionDenied, "message": ErrorMessage.cameraPermissionDenied]
                 callback([
                     error
                 ])
@@ -75,7 +91,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                     self.launchLibrary()
                     break
                 default:
-                    let error = ["error": "LIBRARY_PERMISSION_DENIED"]
+                    let error: [String: Any] = ["code": ErrorCode.libraryPermissionDenied, "message": ErrorMessage.libraryPermissionDenied]
                     callback([
                         error
                     ])
@@ -96,7 +112,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                 self.requestCameraAuthorization()
                 break
             default:
-                let error = ["error": "CAMERA_PERMISSION_DENIED"]
+                let error: [String: Any] = ["code": ErrorCode.cameraPermissionDenied, "message": ErrorMessage.cameraPermissionDenied]
                 callback([
                     error
                 ])
@@ -116,7 +132,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
                 self.requestLibraryAuthorization()
                 break
             default:
-                let error = ["error": "LIBRARY_PERMISSION_DENIED"]
+                let error: [String: Any] = ["code": ErrorCode.libraryPermissionDenied, "message": ErrorMessage.libraryPermissionDenied]
                 callback([
                     error
                 ])
@@ -129,6 +145,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
         guard let callback = self.globalCallback else { return }
         let fetchOptions = PHFetchOptions()
         fetchOptions.includeAssetSourceTypes = .typeUserLibrary
+        fetchOptions.sortDescriptors = [.init(key: "creationDate", ascending: false)]
         self.fetchedAssets = PHAsset.fetchAssets(with: .image, options: fetchOptions)
         self.imageShowerViewController = ImageShowerViewController(fetchedAssets: self.fetchedAssets, options: self.options, callback: callback)
         guard let imageShowerViewController = self.imageShowerViewController else { return }
@@ -185,7 +202,7 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
             guard let `self` = self else { return }
             #if targetEnvironment(simulator)
                 callback([
-                    ["error": "SIMULATOR_ERROR"]
+                    ["code": ErrorCode.simulatorError, "message": ErrorMessage.simulatorError]
                 ])
                 self.globalCallback = nil
             #else
@@ -250,7 +267,7 @@ extension ImageSelector: UIImagePickerControllerDelegate {
         picker.dismiss(animated: true) {
             guard let response = response else {
                 callback([
-                    ["error": "SOURCE_TYPE_MISMATCH"]
+                    ["code": ErrorCode.sourceTypeMismatch, "message": ErrorMessage.sourceTypeMismatch]
                 ])
                 self.globalCallback = nil
                 return

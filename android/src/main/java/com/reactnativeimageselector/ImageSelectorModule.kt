@@ -33,7 +33,20 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     val PICK_IMAGE_REQUEST_CODE: Int = 9898
     var cameraCaptureURI: Uri? = null
     var cameraCaptureFile: File? = null
+
+    object ErrorCode {
+      val cameraPermissionDenied: Int = 100
+      val libraryPermissionDenied: Int = 101
+    }
+
+    object ErrorMessage {
+      val cameraPermissionDenied: String = "CAMERA_PERMISSION_DENIED"
+      val libraryPermissionDenied: String = "LIBRARY_PERMISSION_DENIED"
+    }
+
   }
+
+
 
   private var globalCallback: Callback? = null
   private var options: ReadableMap? = null
@@ -163,7 +176,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
             .setNeutralButton(cancelButtonTitle) { _, _ ->
               val response = Arguments.createMap()
               response.putBoolean("didCancel", true)
-              callback(null, response)
+              callback.invoke(null, response)
               this.globalCallback = null
             }
           dialogBuilder.show()
@@ -179,9 +192,10 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
       } else {
         this.globalCallback.let { callback ->
           if (callback != null) {
-            val response = Arguments.createMap()
-            response.putBoolean("didCancel", true)
-            callback(null, response)
+            val error = Arguments.createMap()
+            error.putInt("code", ErrorCode.cameraPermissionDenied)
+            error.putString("message", ErrorMessage.cameraPermissionDenied)
+            callback.invoke(error)
             this.globalCallback = null
           }
         }
@@ -194,9 +208,10 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
       } else {
         this.globalCallback.let { callback ->
           if (callback != null) {
-            val response = Arguments.createMap()
-            response.putBoolean("didCancel", true)
-            callback(null, response)
+            val error = Arguments.createMap()
+            error.putInt("code", ErrorCode.libraryPermissionDenied)
+            error.putString("message", ErrorMessage.libraryPermissionDenied)
+            callback.invoke(error)
             this.globalCallback = null
           }
         }
