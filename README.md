@@ -61,6 +61,16 @@ ImageSelector.launchPicker((error, response) => {
 });
 ```
 
+## Example
+
+```sh
+$ yarn bootstrap
+$ cd example
+$ yarn start
+$ yarn ios
+$ yarn android
+```
+
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
