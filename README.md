@@ -1,5 +1,9 @@
 # react-native-image-selector
 
+This module is alternative version of https://github.com/react-native-image-picker/react-native-image-picker
+The only change could be iOS (for iOS 14 limited selection issues).
+So I created Image Viewer View Controller which only shows selected images (if user permissions was limited) only for iOS.
+
 image picker native module
 
 ## Installation
@@ -49,15 +53,41 @@ $ lerna add react-native-image-selector --scope="@some/package"
 ## Usage
 
 ```js
-import ImageSelector from 'react-native-image-selector';
+import ImageSelector, { ImageSelectorOptions } from 'react-native-image-selector';
 
 // ...
-ImageSelector.launchPicker((error, response) => {
+
+const options: ImageSelectorOptions = {	// import Options
+  title: "사진 선택",
+  cancelButtonTitle: "취소",
+  takePhotoButtonTitle: "사진 촬영",
+  chooseFromLibraryButtonTitle: "앨범에서 가져오기"
+	storageOptions: {
+		skipBackup: true,
+		path: "images"
+	},
+	permissionDenied: {
+		title: "권한 설정",
+		text: "이 기능을 이용하시려면 권한을 \'허용\'으로 변경해주세요.",
+		reTryTitle: "변경하러가기",
+		okTitle: "닫기"
+	}
+}
+
+ImageSelector.launchPicker(options, (error, response) => {
   if (error) {
-    // TODO: ERROR EXCEPTION
+    if (error.code === ImageSelectorErrorType.CAMERA_PERMISSION_DENIED) {
+      console.error('camera permission denied');
+    }
     return;
   }
-  // TODO: handle response
+  if (response) {
+    if (response.didCancel) {
+      console.log('USER CANCELLED');
+      return;
+    }
+    setResponse(response);
+  }
 });
 ```
 
