@@ -1,15 +1,17 @@
 import { NativeModules } from 'react-native';
 
+export interface ImageSelectorCallbackResponse {
+  fileSize: number;
+  fileName: string;
+  type: string;
+  uri: string;
+}
+
 type ImageSelectorType = {
   launchPicker: (
     callback: (
       error: { error: string },
-      response: {
-        fileSize: number;
-        fileName: string;
-        type: string;
-        uri: string;
-      }
+      response: ImageSelectorCallbackResponse
     ) => void
   ) => void;
 };
