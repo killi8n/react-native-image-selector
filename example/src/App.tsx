@@ -37,8 +37,8 @@ export default function App() {
         }
         if (response) {
           if (response.didCancel) {
-            console.log("USER CANCELLED")
-            return
+            console.log('USER CANCELLED');
+            return;
           }
           setResponse(response);
         }
