@@ -21,10 +21,10 @@ import java.util.*
 class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext), PermissionListener {
 
   companion object {
-    val LIBRARY_PERMISSION_REQUEST_CODE: Int = 1000000000
-    val CAMERA_PERMISSION_REQUEST_CODE: Int = 1010000000
-    val IMAGE_CAPTURE_REQUEST_CODE: Int = 1020000000
-    val PICK_IMAGE_REQUEST_CODE: Int = 1030000000
+    val LIBRARY_PERMISSION_REQUEST_CODE: Int = 7878
+    val CAMERA_PERMISSION_REQUEST_CODE: Int = 8787
+    val IMAGE_CAPTURE_REQUEST_CODE: Int = 8989
+    val PICK_IMAGE_REQUEST_CODE: Int = 9898
     var cameraCaptureURI: Uri? = null
     var cameraCaptureFile: File? = null
   }
