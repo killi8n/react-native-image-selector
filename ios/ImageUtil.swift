@@ -17,7 +17,15 @@ class ImageUtil: NSObject {
         if !FileManager.default.fileExists(atPath: filePath) {
             FileManager.default.createFile(atPath: filePath, contents: imageData, attributes: nil)
         }
-        return ["uri": "file://\(filePath)", "fileName": fileName, "type": "image/png", "fileSize": imageData.count]
+        let base64EncodedString: String = imageData.base64EncodedString()
+        return [
+            "data": base64EncodedString,
+            "path": filePath,
+            "uri": "file://\(filePath)",
+            "fileName": fileName,
+            "type": "image/png",
+            "fileSize": imageData.count
+        ]
     }
     
     static func rotateImage(image: UIImage) -> UIImage? {
