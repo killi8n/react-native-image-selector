@@ -195,6 +195,17 @@ class ImageSelector: RCTEventEmitter, UINavigationControllerDelegate {
         }
         return ["uri": "file://\(filePath)", "fileName": fileName, "type": "image/png", "fileSize": imageData.count]
     }
+    
+    static func rotateImage(image: UIImage) -> UIImage? {
+        if image.imageOrientation == .up {
+            return image
+        }
+        UIGraphicsBeginImageContext(image.size)
+        image.draw(in: CGRect(origin: CGPoint.zero, size: image.size))
+        let copy = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return copy
+    }
 }
 
 
@@ -214,9 +225,11 @@ extension ImageSelector: UIImagePickerControllerDelegate {
         switch picker.sourceType {
             case .camera:
                 if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-                    if let imageData = pickedImage.pngData() {
-                        let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
-                        response = fileCreateResult
+                    if let rotatedImage = ImageSelector.rotateImage(image: pickedImage) {
+                        if let imageData = rotatedImage.pngData() {
+                            let fileCreateResult = ImageSelector.createCacheFile(imageData: imageData)
+                            response = fileCreateResult
+                        }
                     }
                 }
                 break
