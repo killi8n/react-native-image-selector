@@ -59,7 +59,14 @@ class ImageShowerViewController: UIViewController {
     
     @objc
     func dismissViewController(_ sender: UIBarButtonItem) {
-        self.dismiss(animated: true, completion: nil)
+        self.dismiss(animated: true) { [weak self] in
+            guard let `self` = self else { return }
+            if let callback = self.globalCallback {
+                callback([
+                    ["error": "USER_CANCEL"]
+                ])
+            }
+        }
     }
 }
 
