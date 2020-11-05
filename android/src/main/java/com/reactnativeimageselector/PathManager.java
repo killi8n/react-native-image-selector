@@ -7,10 +7,23 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+
+import com.facebook.react.bridge.NoSuchKeyException;
 import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.ReadableMap;
+
+import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.UUID;
 
 public class PathManager {
-  public static String getPathFromURI(final ReactContext context, final Uri uri) {
+  public static String getPathFromURI(final ReactContext context, final Uri uri, final ReadableMap options) {
 
     final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
 
@@ -30,7 +43,7 @@ public class PathManager {
       else if (isDownloadsDocument(uri)) {
 
         final String id = DocumentsContract.getDocumentId(uri);
-        final Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+        final Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.parseLong(id));
 
         return getDataColumn(context, contentUri, null, null);
       }
@@ -59,7 +72,13 @@ public class PathManager {
     }
     // MediaStore (and general)
     else if ("content".equalsIgnoreCase(uri.getScheme())) {
-      return getDataColumn(context, uri, null, null);
+      String res = getDataColumn(context, uri, null, null);
+      // Return the remote address
+      if (res == null && isGooglePhotosUri(uri)) {
+        return PathManager.getImagePathFromInputStreamUri(context, uri, options);
+      } else {
+        return res;
+      }
     }
     // File
     else if ("file".equalsIgnoreCase(uri.getScheme())) {
@@ -100,5 +119,94 @@ public class PathManager {
 
   public static boolean isMediaDocument(Uri uri) {
     return "com.android.providers.media.documents".equals(uri.getAuthority());
+  }
+
+  /**
+   * @param uri The Uri to check.
+   * @return Whether the Uri authority is Google Photos.
+   * @author paulburke
+   */
+  public static boolean isGooglePhotosUri(Uri uri) {
+    return "com.google.android.apps.photos.content".equals(uri.getAuthority()) ||
+      "com.google.android.apps.photos.contentprovider".equals(uri.getAuthority());
+  }
+
+  public static String getImagePathFromInputStreamUri(ReactContext context, Uri uri, final ReadableMap options) {
+    InputStream inputStream = null;
+    String filePath = null;
+
+    if (uri.getAuthority() != null) {
+      try {
+        inputStream = context.getContentResolver().openInputStream(uri); // context needed
+        File photoFile = PathManager.writeFileFromInputStream(context, inputStream, options);
+
+        filePath = photoFile.getPath();
+
+      } catch (FileNotFoundException e) {
+        // log
+        e.printStackTrace();
+      } catch (IOException e) {
+        // log
+        e.printStackTrace();
+      }finally {
+        try {
+          inputStream.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+
+    return filePath;
+  }
+
+  public static File writeFileFromInputStream(ReactContext context, InputStream inputStream, final ReadableMap options) throws IOException {
+    File targetFile = null;
+
+    if (inputStream != null) {
+      int read;
+      byte[] buffer = new byte[8 * 1024];
+
+      targetFile = createCacheFile(context, options);
+      OutputStream outputStream = new FileOutputStream(targetFile);
+
+      while ((read = inputStream.read(buffer)) != -1) {
+        outputStream.write(buffer, 0, read);
+      }
+      outputStream.flush();
+
+      try {
+        outputStream.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
+    return targetFile;
+  }
+
+  @NotNull
+  private static File createCacheFile(ReactContext context, final ReadableMap options) {
+    String uuid = UUID.randomUUID().toString() + ".jpg";
+
+    try {
+      ReadableMap storageOptions = options.getMap("storageOptions");
+      if (storageOptions == null) {
+        throw new NoSuchKeyException("storageOptions null");
+      }
+      String middlePath = storageOptions.getString("path");
+      if (middlePath == null) {
+        throw new NoSuchKeyException("path null");
+      }
+      File path = new File(context.getExternalCacheDir(), middlePath);
+      File result = new File(path, uuid);
+      if (path.exists() || path.mkdir()) {
+        return result;
+      } else {
+        return new File(context.getExternalCacheDir(), uuid);
+      }
+    } catch (NoSuchKeyException e) {
+        return new File(context.getExternalCacheDir(), uuid);
+    }
   }
 }

@@ -34,6 +34,8 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     var cameraCaptureURI: Uri? = null
     var cameraCaptureFile: File? = null
 
+    var globalOptions: ReadableMap? = null
+
     object ErrorCode {
       val cameraPermissionDenied: Int = 100
       val libraryPermissionDenied: Int = 101
@@ -43,14 +45,11 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
       val cameraPermissionDenied: String = "CAMERA_PERMISSION_DENIED"
       val libraryPermissionDenied: String = "LIBRARY_PERMISSION_DENIED"
     }
-
   }
 
 
 
   private var globalCallback: Callback? = null
-  private var options: ReadableMap? = null
-
 
   override fun getName(): String {
     return "ImageSelector"
@@ -133,7 +132,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
 
   @ReactMethod
   fun launchPicker(options: ReadableMap?, callback: Callback) {
-    this.options = options
+    globalOptions = options
     this.globalCallback = callback
 
     var title: String? = "Pick Photos"
@@ -141,24 +140,32 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     var chooseFromLibraryButtonTitle: String? = "Open Photo Gallery"
     var cancelButtonTitle: String? = "Cancel"
 
-    this.options.let { option ->
+    globalOptions.let { option ->
       if (option != null) {
-        if (option.getString("title") != null) {
-          title = option.getString("title")
+        if (option.hasKey("title")) {
+          if (option.getString("title") != null) {
+            title = option.getString("title")
+          }
         }
-        if (option.getString("takePhotoButtonTitle") != null) {
-          takePhotoButtonTitle = option.getString("takePhotoButtonTitle")
+        if (option.hasKey("takePhotoButtonTitle")) {
+          if (option.getString("takePhotoButtonTitle") != null) {
+            takePhotoButtonTitle = option.getString("takePhotoButtonTitle")
+          }
         }
-        if (option.getString("chooseFromLibraryButtonTitle") != null) {
-          chooseFromLibraryButtonTitle = option.getString("chooseFromLibraryButtonTitle")
+
+        if (option.hasKey("chooseFromLibraryButtonTitle")) {
+          if (option.getString("chooseFromLibraryButtonTitle") != null) {
+            chooseFromLibraryButtonTitle = option.getString("chooseFromLibraryButtonTitle")
+          }
         }
-        if (option.getString("cancelButtonTitle") != null) {
-          cancelButtonTitle = option.getString("cancelButtonTitle")
+        if (option.hasKey("cancelButtonTitle")) {
+          if (option.getString("cancelButtonTitle") != null) {
+            cancelButtonTitle = option.getString("cancelButtonTitle")
+          }
         }
       }
     }
-
-
+    
     currentActivity.let {
       it
       if (it != null) {
@@ -305,7 +312,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
                                 val displayNameColumnIndex = parsedCursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
                                 val fileSize = parsedCursor.getLong(sizeColumnIndex)
                                 val fileName = parsedCursor.getString(displayNameColumnIndex)
-                                val path = PathManager.getPathFromURI(parsedContext, parsedUri)
+                                val path = PathManager.getPathFromURI(parsedContext, parsedUri, globalOptions)
                                 val uriString = "file://$path"
                                 val type = MimeTypeMap.getFileExtensionFromUrl(uriString)
                                 var base64EncodedString: String? = null
