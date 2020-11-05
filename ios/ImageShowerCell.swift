@@ -38,17 +38,11 @@ class ImageShowerCell: UICollectionViewCell {
     }
     
     func fetchImage(asset: PHAsset) -> Void {
-        let manager = PHImageManager.default()
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .opportunistic
-        options.isSynchronous = true
-        options.resizeMode = .exact
-        manager.requestImage(for: asset, targetSize: CGSize(width: self.contentView.frame.size.width, height: self.contentView.frame.size.height), contentMode: .aspectFill, options: options) { [weak self] (image: UIImage?, info: [AnyHashable : Any]?) in
+        ImageUtil.requestImage(asset: asset, resizeMode: .exact, targetSize: CGSize(width: self.contentView.frame.size.width, height: self.contentView.frame.size.height), contentMode: .aspectFill) { [weak self] (image: UIImage) in
             guard let `self` = self else { return }
-            if let image = image {
-                self.cellImageView.image = image
-                return
-            }
+            self.cellImageView.image = image
+        } exceptionCompletion: {
+            
         }
     }
 }

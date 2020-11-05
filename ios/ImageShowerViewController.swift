@@ -20,6 +20,16 @@ class ImageShowerViewController: UIViewController {
         cv.dataSource = self
         return cv
     }()
+    private let loadingIndicator: UIActivityIndicatorView = {
+        let indicator: UIActivityIndicatorView = UIActivityIndicatorView()
+        if #available(iOS 13.0, *) {
+            indicator.style = .large
+        } else {
+            indicator.style = .gray
+        }
+        indicator.isHidden = true
+        return indicator
+    }()
     private var globalCallback: RCTResponseSenderBlock?
     private let layout = UICollectionViewFlowLayout()
     private let reusableIdentifier: String = "cell"
@@ -47,11 +57,12 @@ class ImageShowerViewController: UIViewController {
         super.viewDidLoad()
         self.view.backgroundColor = .white
         self.view.addSubview(self.collectionView)
+        self.view.addSubview(self.loadingIndicator)
+        
         self.collectionView.translatesAutoresizingMaskIntoConstraints = false
         var topAnchor: NSLayoutConstraint? = nil
         if #available(iOS 11.0, *) {
             topAnchor = self.collectionView.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 2)
-            
         } else {
             topAnchor = self.collectionView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor, constant: 2)
         }
@@ -61,6 +72,11 @@ class ImageShowerViewController: UIViewController {
         if let parsedTopAnchor = topAnchor {
             self.view.addConstraints([parsedTopAnchor, leftAnchor, bottomAnchor, rightAnchor])
         }
+        
+        self.loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
+        let indicatorCenterXAnchor = self.loadingIndicator.centerXAnchor.constraint(equalTo: self.view.centerXAnchor)
+        let indicatorCenterYAnchor = self.loadingIndicator.centerYAnchor.constraint(equalTo: self.view.centerYAnchor)
+        self.view.addConstraints([indicatorCenterXAnchor, indicatorCenterYAnchor])
     }
     
     @objc
@@ -71,6 +87,16 @@ class ImageShowerViewController: UIViewController {
                 let callbackResponse: [[String: Any]?] = [nil, ["didCancel": true]]
                 callback(callbackResponse as [Any])
             }
+        }
+    }
+    
+    func setLoadingIndicator(isLoading: Bool) -> Void {
+        if isLoading {
+            self.loadingIndicator.startAnimating()
+            self.loadingIndicator.isHidden = false
+        } else {
+            self.loadingIndicator.stopAnimating()
+            self.loadingIndicator.isHidden = true
         }
     }
 }
@@ -110,30 +136,36 @@ extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UIColle
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let assets = self.fetchedAssets else { return }
         let asset = assets.object(at: indexPath.item)
-        let manager = PHImageManager.default()
-        let options = PHImageRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.version = .original
-        options.isSynchronous = true
-        manager.requestImageData(for: asset, options: options) { [weak self] (imageData: Data?, _: String?, _: UIImage.Orientation, _: [AnyHashable : Any]?) in
+        self.setLoadingIndicator(isLoading: true)
+        ImageUtil.requestImageData(asset: asset, resizeMode: nil) { [weak self] (imageData: Data) in
             guard let `self` = self else { return }
-            if let imageData = imageData {
-                var pathDirectory: String? = nil
-                if let storageOptions = self.options["storageOptions"] as? NSDictionary {
-                    if let path = storageOptions.value(forKey: "path") as? String {
-                        pathDirectory = path
-                    }
+            var pathDirectory: String? = nil
+            if let storageOptions = self.options["storageOptions"] as? NSDictionary {
+                if let path = storageOptions.value(forKey: "path") as? String {
+                    pathDirectory = path
                 }
-                let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData, pathDirectory: pathDirectory, callback: self.globalCallback)
-                self.dismiss(animated: true) {
-                    guard let callback = self.globalCallback else { return }
-                    let callbackResponse: [[String: Any]?] = [
-                        nil,
-                        fileCreateResult
-                    ]
-                    callback(callbackResponse as [Any])
-                    self.globalCallback = nil
-                }
+            }
+            let fileCreateResult = ImageUtil.createCacheFile(imageData: imageData, pathDirectory: pathDirectory, callback: self.globalCallback)
+            self.dismiss(animated: true) {
+                guard let callback = self.globalCallback else { return }
+                let callbackResponse: [[String: Any]?] = [
+                    nil,
+                    fileCreateResult
+                ]
+                callback(callbackResponse as [Any])
+                self.globalCallback = nil
+                self.setLoadingIndicator(isLoading: false)
+            }
+        } exceptionCompletion: { [weak self] in
+            guard let `self` = self else { return }
+            self.dismiss(animated: true) {
+                guard let callback = self.globalCallback else { return }
+                let callbackResponse: [[String: Any]?] = [
+                    ["code": ErrorCode.fileCreateError, "message": ErrorMessage.fileCreateError]
+                ]
+                callback(callbackResponse as [Any])
+                self.globalCallback = nil
+                self.setLoadingIndicator(isLoading: false)
             }
         }
     }
