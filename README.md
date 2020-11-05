@@ -1,10 +1,10 @@
 # react-native-image-selector
 
 This module is alternative version of https://github.com/react-native-image-picker/react-native-image-picker
-The only change could be iOS (for iOS 14 limited selection issues).
-So I created Image Viewer View Controller which only shows selected images (if user permissions was limited) only for iOS.
 
-image picker native module
+The only change could be iOS (for iOS 14 limited selection issues).
+
+So I created Image Viewer View Controller which only shows selected images (if user selected limited permission) only for iOS.
 
 ## Installation
 
@@ -33,14 +33,16 @@ $ lerna add react-native-image-selector --scope="@some/package"
 
 ```xml
     <key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
-    <false/> // you can turn on this to <true />
+    <false/>
     <key>NSCameraUsageDescription</key>
     <string>카메라 권한을 얻겠습니다.</string>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string></string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>사진을 가져오겠습니다.</string>
 ```
+
+`PHPhotoLibraryPreventAutomaticLimitedAccessAlert`
+
+> // you can turn on this to <true /> if it is true, the permission alert will not be showed up every time when you request or check photo authorization.
 
 `android/AndroidManifest.xml`
 
@@ -86,7 +88,7 @@ ImageSelector.launchPicker(options, (error, response) => {
   }
   if (response) {
     if (response.didCancel) {
-      console.log('USER CANCELLED');
+      console.log('USER CANCELED');
       return;
     }
     setResponse(response);
@@ -111,3 +113,9 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 ## License
 
 MIT
+
+## TODO
+
+1. remove Documentdirectory photo file (iOS only) when module or react component will be unmounted.
+2. iOS status bar color (Dark Mode).
+3. code refactoring (Android).
