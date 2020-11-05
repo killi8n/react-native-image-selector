@@ -112,6 +112,7 @@ extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UIColle
         let asset = assets.object(at: indexPath.item)
         let manager = PHImageManager.default()
         let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = true
         options.version = .original
         options.isSynchronous = true
         manager.requestImageData(for: asset, options: options) { [weak self] (imageData: Data?, _: String?, _: UIImage.Orientation, _: [AnyHashable : Any]?) in
