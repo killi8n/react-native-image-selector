@@ -165,7 +165,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
         }
       }
     }
-    
+
     currentActivity.let {
       it
       if (it != null) {

@@ -68,6 +68,8 @@ public class PathManager {
         };
 
         return getDataColumn(context, contentUri, selection, selectionArgs);
+      } else {
+        return PathManager.getImagePathFromInputStreamUri(context, uri, options);
       }
     }
     // MediaStore (and general)
@@ -85,7 +87,7 @@ public class PathManager {
       return uri.getPath();
     }
 
-    return null;
+    return PathManager.getImagePathFromInputStreamUri(context, uri, options);
   }
 
   public static String getDataColumn(ReactContext context, Uri uri, String selection, String[] selectionArgs) {
