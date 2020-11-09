@@ -99,7 +99,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
   }
 
   private fun launchLibrary() {
-    Intent(Intent.ACTION_GET_CONTENT).also { galleryIntent ->
+    Intent(Intent.ACTION_PICK).also { galleryIntent ->
       galleryIntent.type = "image/*"
       currentActivity.let { currentActivity ->
         this.globalCallback.let { callback ->
