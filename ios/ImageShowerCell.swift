@@ -38,7 +38,9 @@ class ImageShowerCell: UICollectionViewCell {
     }
     
     func fetchImage(asset: PHAsset) -> Void {
-        ImageUtil.requestImage(asset: asset, resizeMode: .exact, targetSize: CGSize(width: self.contentView.frame.size.width, height: self.contentView.frame.size.height), contentMode: .aspectFill) { [weak self] (image: UIImage) in
+        let cellWidth = self.contentView.frame.size.width
+        let cellHeight = self.contentView.frame.size.height
+        ImageUtil.requestImage(asset: asset, deliveryMode: .opportunistic, resizeMode: .fast, targetSize: CGSize(width: cellWidth + cellWidth / 2, height: cellHeight + cellHeight / 2), contentMode: .aspectFill) { [weak self] (image: UIImage) in
             guard let `self` = self else { return }
             self.cellImageView.image = image
         } exceptionCompletion: {

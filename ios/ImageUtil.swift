@@ -51,11 +51,11 @@ class ImageUtil: NSObject {
         return copy
     }
     
-    static func requestImage(asset: PHAsset, resizeMode: PHImageRequestOptionsResizeMode?, targetSize: CGSize, contentMode: PHImageContentMode, completion: @escaping (_ image: UIImage) -> Void, exceptionCompletion: (() -> Void)?) -> Void {
+    static func requestImage(asset: PHAsset, deliveryMode: PHImageRequestOptionsDeliveryMode, resizeMode: PHImageRequestOptionsResizeMode?, targetSize: CGSize, contentMode: PHImageContentMode, completion: @escaping (_ image: UIImage) -> Void, exceptionCompletion: (() -> Void)?) -> Void {
         let manager = PHImageManager.default()
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = true
-        options.deliveryMode = .opportunistic
+        options.deliveryMode = deliveryMode
         options.isSynchronous = false
         if let resizeMode = resizeMode {
             options.resizeMode = resizeMode
