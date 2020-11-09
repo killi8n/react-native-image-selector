@@ -240,16 +240,19 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
         e.printStackTrace()
       }
       val bm = BitmapFactory.decodeStream(fis)
-      val baos = ByteArrayOutputStream()
-      bm.compress(Bitmap.CompressFormat.JPEG, 100, baos)
-      val b: ByteArray = baos.toByteArray()
-      //Base64.de
-      return Base64.encodeToString(b, Base64.NO_WRAP)
+      return if (bm == null) {
+//        file size == 0byte
+        ""
+      } else {
+        val baos = ByteArrayOutputStream()
+        bm.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+        val b: ByteArray = baos.toByteArray()
+        Base64.encodeToString(b, Base64.NO_WRAP)
+      }
     }
 
     override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
       super.onActivityResult(activity, requestCode, resultCode, data)
-//      resultCode == Activity.RESULT_CANCELED
       if (requestCode == IMAGE_CAPTURE_REQUEST_CODE) {
         if (resultCode == Activity.RESULT_OK) {
           cameraCaptureFile.let { cameraCaptureFile ->
