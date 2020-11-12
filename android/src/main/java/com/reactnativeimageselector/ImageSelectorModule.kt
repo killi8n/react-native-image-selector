@@ -260,7 +260,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
               val path: String? = Uri.fromFile(cameraCaptureFile).path
               val uriString = "file://$path"
               val fileSize: Long = cameraCaptureFile.length()
-              val type: String = cameraCaptureFile.extension
+              val type = PathManager.getExtensionFromString(uriString)
               val fileName: String = cameraCaptureFile.name
               var base64EncodedString: String? = null
               path.let { parsedPath ->
@@ -317,7 +317,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
                                 val fileName = parsedCursor.getString(displayNameColumnIndex)
                                 val path = PathManager.getPathFromURI(parsedContext, parsedUri, globalOptions)
                                 val uriString = "file://$path"
-                                val type = MimeTypeMap.getFileExtensionFromUrl(uriString)
+                                val type = PathManager.getExtensionFromString(uriString)
                                 var base64EncodedString: String? = null
                                 path.let { parsedPath ->
                                   if (parsedPath != null) {

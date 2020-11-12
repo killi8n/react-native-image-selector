@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.webkit.MimeTypeMap;
 
 import com.facebook.react.bridge.NoSuchKeyException;
 import com.facebook.react.bridge.ReactContext;
@@ -88,6 +89,18 @@ public class PathManager {
     }
 
     return PathManager.getImagePathFromInputStreamUri(context, uri, options);
+  }
+
+  public static String getExtensionFromString(String uriString) {
+    try {
+      String type = MimeTypeMap.getFileExtensionFromUrl(uriString);
+      if (type.equals("") && uriString.contains(".")) {
+        type = uriString.substring(uriString.lastIndexOf(".") + 1);
+      }
+      return type;
+    } catch (Exception e) {
+      return "jpg";
+    }
   }
 
   public static String getDataColumn(ReactContext context, Uri uri, String selection, String[] selectionArgs) {
