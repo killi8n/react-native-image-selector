@@ -11,6 +11,14 @@ import Photos
 
 class ImageUtil: NSObject {
     static func createCacheFile(imageData: Data, pathDirectory: String?, callback: RCTResponseSenderBlock?) -> [String: Any]? {
+        guard let jpegImage = UIImage(data: imageData) else {
+            return nil
+        }
+        
+        guard let imageData = jpegImage.jpegData(compressionQuality: 1.0) else {
+            return nil
+        }
+        
         let fileManager = FileManager.default
         if let documentDirectoryPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first {
             let path = (documentDirectoryPath as NSString).appendingPathComponent(pathDirectory ?? "")
@@ -24,7 +32,7 @@ class ImageUtil: NSObject {
                 return nil
             }
             let uuid: String = UUID().uuidString
-            let fileName = (uuid as NSString).appendingPathExtension("png") ?? "\(uuid).png"
+            let fileName = (uuid as NSString).appendingPathExtension("jpeg") ?? "\(uuid).jpeg"
             let filePath = (path as NSString).appendingPathComponent(fileName)
             fileManager.createFile(atPath: filePath, contents: imageData, attributes: nil)
             let base64EncodedString: String = imageData.base64EncodedString()
@@ -33,7 +41,7 @@ class ImageUtil: NSObject {
                 "path": filePath,
                 "uri": "file://\(filePath)",
                 "fileName": fileName,
-                "type": "image/png",
+                "type": "image/jpeg",
                 "fileSize": imageData.count
             ]
         }

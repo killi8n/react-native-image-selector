@@ -244,7 +244,7 @@ extension ImageSelector: UIImagePickerControllerDelegate {
             case .camera:
                 if let pickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
                     if let rotatedImage = ImageUtil.rotateImage(image: pickedImage) {
-                        if let imageData = rotatedImage.pngData() {
+                        if let imageData = rotatedImage.jpegData(compressionQuality: 1.0) {
                             var pathDirectory: String? = nil
                             if let storageOptions = self.options["storageOptions"] as? [String: Any] {
                                 if let path = storageOptions["path"] as? String {
