@@ -10,9 +10,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import android.provider.OpenableColumns
 import android.util.Base64
-import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.PermissionAwareActivity
@@ -257,30 +255,15 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
         if (resultCode == Activity.RESULT_OK) {
           cameraCaptureFile.let { cameraCaptureFile ->
             if (cameraCaptureFile != null) {
-              val path: String? = Uri.fromFile(cameraCaptureFile).path
-              val uriString = "file://$path"
-              val fileSize: Long = cameraCaptureFile.length()
-              val type = PathManager.getExtensionFromString(uriString)
-              val fileName: String = cameraCaptureFile.name
-              var base64EncodedString: String? = null
-              path.let { parsedPath ->
-                if (parsedPath != null) {
-                  base64EncodedString = this.encodeImage(parsedPath)
+              if (activity != null) {
+                val response = FileManager.createCacheFile(activity.applicationContext, Uri.fromFile(cameraCaptureFile), globalOptions)
+                this.callbackInvoker.let { callback ->
+                  if (callback != null) {
+                    callback.invoke(null, response)
+                    this.callbackInvoker = null
+                  }
                 }
-              }
-              this.callbackInvoker.let { callback ->
-                if (callback != null) {
-                  val response = Arguments.createMap()
-                  response.putString("path", path)
-                  response.putString("uri", uriString)
-                  response.putDouble("fileSize", fileSize.toDouble())
-                  response.putString("type", "image/$type")
-                  response.putString("fileName", fileName)
-                  response.putString("data", base64EncodedString)
-                  callback.invoke(null, response)
-                  this.callbackInvoker = null
-                }
-              }
+              };
             }
           }
         }
@@ -303,41 +286,12 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
               val uri = parsedData.data
               uri.let { parsedUri ->
                 if (parsedUri != null) {
-                  this.callbackInvoker.let { callback ->
-                    if (callback != null) {
-                      this.context.let { parsedContext ->
-                        if (parsedContext != null) {
-                          val cursor = parsedContext.contentResolver.query(parsedUri, null, null, null, null)
-                          cursor.let { parsedCursor ->
-                            if (parsedCursor != null) {
-                              if (parsedCursor.moveToFirst()) {
-                                val sizeColumnIndex = parsedCursor.getColumnIndex(OpenableColumns.SIZE)
-                                val displayNameColumnIndex = parsedCursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
-                                val fileSize = parsedCursor.getLong(sizeColumnIndex)
-                                val fileName = parsedCursor.getString(displayNameColumnIndex)
-                                val path = PathManager.getPathFromURI(parsedContext, parsedUri, globalOptions)
-                                val uriString = "file://$path"
-                                val type = PathManager.getExtensionFromString(uriString)
-                                var base64EncodedString: String? = null
-                                path.let { parsedPath ->
-                                  if (parsedPath != null) {
-                                    base64EncodedString = this.encodeImage(parsedPath)
-                                  }
-                                }
-                                val response = Arguments.createMap()
-                                response.putString("path", path)
-                                response.putString("uri", uriString)
-                                response.putDouble("fileSize", fileSize.toDouble())
-                                response.putString("type", "image/$type")
-                                response.putString("fileName", fileName)
-                                response.putString("data", base64EncodedString)
-                                callback.invoke(null, response)
-                                this.callbackInvoker = null
-                                parsedCursor.close()
-                              }
-                            }
-                          }
-                        }
+                  if (activity != null) {
+                    val response = FileManager.createCacheFile(activity.applicationContext, parsedUri, globalOptions)
+                    this.callbackInvoker.let { callback ->
+                      if (callback != null) {
+                        callback.invoke(null, response)
+                        this.callbackInvoker = null
                       }
                     }
                   }

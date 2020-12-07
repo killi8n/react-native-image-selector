@@ -2,6 +2,7 @@ package com.reactnativeimageselector;
 
 import android.content.ContentUris;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -184,7 +185,6 @@ public class PathManager {
 
       targetFile = createCacheFile(context, options);
       OutputStream outputStream = new FileOutputStream(targetFile);
-
       while ((read = inputStream.read(buffer)) != -1) {
         outputStream.write(buffer, 0, read);
       }
