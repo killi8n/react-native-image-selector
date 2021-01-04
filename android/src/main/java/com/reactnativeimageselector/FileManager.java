@@ -25,13 +25,14 @@ import java.util.UUID;
 
 public class FileManager {
   public static WritableMap createCacheFile(Context context, Uri fileUri, ReadableMap options) {
+
     InputStream inputStream = FileManager.makeInputStream(context, fileUri);
 
     if (inputStream == null) {
       return null;
     }
 
-    File cacheFile = FileManager.writeFileFromInputStream(context, inputStream, FileManager.makeRandomCacheFile(context, options));
+    File cacheFile = FileManager.writeFileFromInputStream(inputStream, FileManager.makeRandomCacheFile(context, options), fileUri);
     if (cacheFile == null) {
       return null;
     }
@@ -89,7 +90,7 @@ public class FileManager {
     return inputStream;
   }
 
-  public static File writeFileFromInputStream(Context context, InputStream inputStream, File targetFile) {
+  public static File writeFileFromInputStream(InputStream inputStream, File targetFile, Uri fileUri) {
     int read;
     byte[] buffer = new byte[8 * 1024];
     OutputStream outputStream = null;
@@ -104,13 +105,11 @@ public class FileManager {
     }
 
     try {
+      int originalOrientation = getOrientation(fileUri);
 
       Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
 
-      ExifInterface exifInterface = new ExifInterface(targetFile.getPath());
-      int orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
-
-      switch (orientation) {
+      switch (originalOrientation) {
         case ExifInterface.ORIENTATION_ROTATE_90:
           bitmap = rotateImage(bitmap, 90);
           break;
@@ -157,6 +156,17 @@ public class FileManager {
     byte[] byteArray = baos.toByteArray();
     return Base64.encodeToString(byteArray, Base64.NO_WRAP);
   }
+
+  public static int getOrientation(Uri fileUri) {
+    try {
+      ExifInterface exif = new ExifInterface(fileUri.getPath());
+      return exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+    } catch (IOException e) {
+      e.printStackTrace();
+      return ExifInterface.ORIENTATION_UNDEFINED;
+    }
+  }
+
 
   public static Bitmap rotateImage(Bitmap source, float angle) {
     Matrix matrix = new Matrix();
