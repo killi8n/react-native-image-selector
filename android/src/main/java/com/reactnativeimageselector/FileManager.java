@@ -3,6 +3,8 @@ package com.reactnativeimageselector;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.util.Base64;
 
@@ -36,12 +38,17 @@ public class FileManager {
 
     WritableMap response = Arguments.createMap();
 
-    response.putString("path", cacheFile.getPath());
-    response.putString("uri", "file://" + cacheFile.getPath());
-    response.putDouble("fileSize", (double) cacheFile.length());
-    response.putString("type", "image/jpeg");
-    response.putString("fileName", cacheFile.getName());
-    String base64EncodedString = FileManager.encodeBase64(cacheFile.getPath());
+    String photoPath = cacheFile.getPath();
+    double fileSize = (double) cacheFile.length();
+    String type = "image/jpeg";
+    String fileName = cacheFile.getName();
+
+    response.putString("path", photoPath);
+    response.putString("uri", "file://" + photoPath);
+    String base64EncodedString = FileManager.encodeBase64(photoPath);
+    response.putDouble("fileSize", fileSize);
+    response.putString("type", type);
+    response.putString("fileName", fileName);
     response.putString("data", base64EncodedString);
     return response;
   }
@@ -96,10 +103,30 @@ public class FileManager {
       return null;
     }
 
-    Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
-
     try {
+
+      Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+
+      ExifInterface exifInterface = new ExifInterface(targetFile.getPath());
+      int orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+
+      switch (orientation) {
+        case ExifInterface.ORIENTATION_ROTATE_90:
+          bitmap = rotateImage(bitmap, 90);
+          break;
+        case ExifInterface.ORIENTATION_ROTATE_180:
+          bitmap = rotateImage(bitmap, 180);
+          break;
+        case ExifInterface.ORIENTATION_ROTATE_270:
+          bitmap = rotateImage(bitmap, 270);
+          break;
+        case  ExifInterface.ORIENTATION_NORMAL:
+        default:
+          break;
+      }
+
+      bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+
       while ((read = inputStream.read(buffer)) != -1) {
         outputStream.write(buffer, 0, read);
       }
@@ -129,5 +156,11 @@ public class FileManager {
     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
     byte[] byteArray = baos.toByteArray();
     return Base64.encodeToString(byteArray, Base64.NO_WRAP);
+  }
+
+  public static Bitmap rotateImage(Bitmap source, float angle) {
+    Matrix matrix = new Matrix();
+    matrix.postRotate(angle);
+    return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
   }
 }
