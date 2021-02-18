@@ -20,6 +20,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.util.*
+import kotlin.Exception
 
 
 class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext), PermissionListener {
@@ -37,15 +38,17 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     object ErrorCode {
       val cameraPermissionDenied: Int = 100
       val libraryPermissionDenied: Int = 101
+      val notValidPath: Int = 102
+      val failPickImage: Int = 103
     }
 
     object ErrorMessage {
       val cameraPermissionDenied: String = "CAMERA_PERMISSION_DENIED"
       val libraryPermissionDenied: String = "LIBRARY_PERMISSION_DENIED"
+      val notValidPath: String = "NOT_VALID_PATH"
+      val failPickImage: String = "FAIL_TO_PICK_IMAGE"
     }
   }
-
-
 
   private var globalCallback: Callback? = null
 
@@ -284,22 +287,38 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
           data.let { parsedData ->
             if (parsedData != null) {
               val uri = parsedData.data
-              uri.let { parsedUri ->
-                if (parsedUri != null) {
-                  if (activity != null) {
+              uri?.let { parsedUri ->
+                activity?.let { availableActivity ->
+                  try {
                     var realPathFromUri: String? = PathManager.getPathFromURI(context, parsedUri, globalOptions)
-                    realPathFromUri?.let {
-                      if (!it.startsWith("file://")) {
+                    realPathFromUri.let { realPath ->
+                      if (realPath == null) {
+                        throw NullPointerException("realPathFromUri is Null")
+                      }
+                      if (!realPath.startsWith("file://")) {
                         realPathFromUri = "file://${realPathFromUri}"
                       }
-                      val realPathUri = Uri.parse(realPathFromUri)
-                      val response = FileManager.createCacheFile(activity.applicationContext, realPathUri, globalOptions)
-                      this.callbackInvoker.let { callback ->
-                        if (callback != null) {
-                          callback.invoke(null, response)
-                          this.callbackInvoker = null
-                        }
+                      val response = FileManager.createCacheFile(availableActivity.applicationContext, Uri.parse(realPathFromUri), globalOptions)
+                      this.callbackInvoker?.let { invoker ->
+                        invoker.invoke(null, response)
+                        this.callbackInvoker = null
                       }
+                    }
+                  } catch (e: NullPointerException) {
+                    this.callbackInvoker?.let {
+                      val error = Arguments.createMap()
+                      error.putInt("code", ErrorCode.notValidPath)
+                      error.putString("message", "${ErrorMessage.notValidPath}, ${e.message}")
+                      it.invoke(error)
+                      this.callbackInvoker = null
+                    }
+                  } catch (e: Exception) {
+                    this.callbackInvoker?.let {
+                      val error = Arguments.createMap()
+                      error.putInt("code", ErrorCode.failPickImage)
+                      error.putString("message", ErrorMessage.failPickImage)
+                      it.invoke(error)
+                      this.callbackInvoker = null
                     }
                   }
                 }
@@ -322,4 +341,3 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     }
   }
 }
-
