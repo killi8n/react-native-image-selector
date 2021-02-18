@@ -38,8 +38,8 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
     object ErrorCode {
       val cameraPermissionDenied: Int = 100
       val libraryPermissionDenied: Int = 101
-      val notValidPath: Int = 102
-      val failPickImage: Int = 103
+      val notValidPath: Int = 105
+      val failPickImage: Int = 106
     }
 
     object ErrorMessage {

@@ -38,6 +38,8 @@ export enum ImageSelectorErrorType {
   SIMULATOR_ERROR = 102,
   SOURCE_TYPE_MISMATCH = 103,
   FILE_CREATE_ERROR = 104,
+  NOT_VALID_PATH = 105,
+  FAIL_TO_PICK_IMAGE = 106,
 }
 
 type ImageSelectorType = {
