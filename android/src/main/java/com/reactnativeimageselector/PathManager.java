@@ -106,23 +106,29 @@ public class PathManager {
 
   public static String getDataColumn(ReactContext context, Uri uri, String selection, String[] selectionArgs) {
     Cursor cursor = null;
-    final String column = "_data";
+    final String column = MediaStore.Images.Media.DATA;
     final String[] projection = {
-      column
+      column,
     };
 
+    String dataColumnString = null;
+
     try {
+
       cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs,
         null);
       if (cursor != null && cursor.moveToFirst()) {
         final int column_index = cursor.getColumnIndexOrThrow(column);
-        return cursor.getString(column_index);
+        dataColumnString = cursor.getString(column_index);
       }
+    } catch (Exception e) {
+        dataColumnString = null;
     } finally {
-      if (cursor != null)
+      if (cursor != null) {
         cursor.close();
+      }
+      return dataColumnString;
     }
-    return null;
   }
 
   public static boolean isExternalStorageDocument(Uri uri) {

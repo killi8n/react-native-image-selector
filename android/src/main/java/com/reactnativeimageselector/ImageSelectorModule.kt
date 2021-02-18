@@ -287,16 +287,18 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
               uri.let { parsedUri ->
                 if (parsedUri != null) {
                   if (activity != null) {
-                    var realPathFromUri = PathManager.getPathFromURI(context, parsedUri, globalOptions)
-                    if (!realPathFromUri.startsWith("file://")) {
-                      realPathFromUri = "file://${realPathFromUri}"
-                    }
-                    val realPathUri = Uri.parse(realPathFromUri)
-                    val response = FileManager.createCacheFile(activity.applicationContext, realPathUri, globalOptions)
-                    this.callbackInvoker.let { callback ->
-                      if (callback != null) {
-                        callback.invoke(null, response)
-                        this.callbackInvoker = null
+                    var realPathFromUri: String? = PathManager.getPathFromURI(context, parsedUri, globalOptions)
+                    realPathFromUri?.let {
+                      if (!it.startsWith("file://")) {
+                        realPathFromUri = "file://${realPathFromUri}"
+                      }
+                      val realPathUri = Uri.parse(realPathFromUri)
+                      val response = FileManager.createCacheFile(activity.applicationContext, realPathUri, globalOptions)
+                      this.callbackInvoker.let { callback ->
+                        if (callback != null) {
+                          callback.invoke(null, response)
+                          this.callbackInvoker = null
+                        }
                       }
                     }
                   }
