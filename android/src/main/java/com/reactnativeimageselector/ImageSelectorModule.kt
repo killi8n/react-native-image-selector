@@ -61,7 +61,7 @@ class ImageSelectorModule(reactContext: ReactApplicationContext) : ReactContextB
       currentActivity.let { activity ->
         if (activity != null) {
           takePictureIntent.resolveActivity(activity.packageManager).also {
-            cameraCaptureFile = File(Environment.getExternalStorageDirectory(), "react-native-image-selector_" + UUID.randomUUID().toString() + ".jpg")
+            cameraCaptureFile = File(reactApplicationContext.getExternalFilesDir(null)?.absolutePath, "react-native-image-selector_" + UUID.randomUUID().toString() + ".jpg")
             cameraCaptureFile.let { file ->
               if (file != null) {
                 cameraCaptureURI = FileProvider.getUriForFile(reactApplicationContext, StringBuilder(reactApplicationContext.packageName).append(".fileprovider").toString(), file)
