@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { StyleSheet, Button, SafeAreaView, Image, Text } from 'react-native';
 import ImageSelector, {
   ImageSelectorCallbackResponse,
@@ -25,10 +25,8 @@ const options: ImageSelectorOptions = {
 };
 
 export default function App() {
-  const [
-    response,
-    setResponse,
-  ] = React.useState<ImageSelectorCallbackResponse | null>(null);
+  const [response, setResponse] =
+    React.useState<ImageSelectorCallbackResponse | null>(null);
   const handlePhotos = async () => {
     try {
       ImageSelector.launchPicker(options, (error, response) => {
