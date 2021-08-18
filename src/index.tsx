@@ -25,6 +25,7 @@ export interface ImageSelectorOptions {
     reTryTitle?: string;
     okTitle?: string;
   };
+  iOSGridNumber?: 3 | 4;
 }
 
 interface ImageSelectorError {

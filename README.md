@@ -77,6 +77,7 @@ const options: ImageSelectorOptions = {
     reTryTitle: '변경하러가기',
     okTitle: '닫기',
   },
+  iOSGridNumber: 4 // iOS Only
 };
 
 ImageSelector.launchPicker(options, (error, response) => {

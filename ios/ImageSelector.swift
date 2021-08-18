@@ -189,6 +189,9 @@ class ImageSelector: NSObject, UINavigationControllerDelegate {
             if let permissionDenied = options["permissionDenied"] {
                 self.options["permissionDenied"] = permissionDenied
             }
+            if let iOSGridNumber = options["iOSGridNumber"] {
+                self.options["iOSGridNumber"] = iOSGridNumber
+            }
         }
     }
     

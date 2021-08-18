@@ -1,6 +1,6 @@
 {
   "name": "react-native-image-selector",
-  "version": "0.1.23",
+  "version": "1.0.0",
   "description": "image picker native module",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",

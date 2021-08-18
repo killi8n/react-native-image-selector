@@ -118,7 +118,15 @@ extension ImageShowerViewController: UICollectionViewDelegateFlowLayout, UIColle
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.layer.frame.width / 3 - 2, height: collectionView.layer.frame.height / 6.5)
+        var numberOfItemsPerRow = 3
+        var heightDivider = 6.5
+        if let iOSGridNumber = self.options["iOSGridNumber"] as? Int {
+            numberOfItemsPerRow = iOSGridNumber
+        }
+        if numberOfItemsPerRow == 4 {
+            heightDivider = 8
+        }
+        return CGSize(width: collectionView.layer.frame.width / CGFloat(numberOfItemsPerRow) - 2, height: collectionView.layer.frame.height / CGFloat(heightDivider))
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
