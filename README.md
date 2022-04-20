@@ -77,7 +77,11 @@ const options: ImageSelectorOptions = {
     reTryTitle: '변경하러가기',
     okTitle: '닫기',
   },
-  iOSGridNumber: 4 // iOS Only
+  // iOS Only
+  iOSGridNumber: 4,
+  // iOS Only, should be upper than iOS 15.0 for 'pageSheet'
+  // default value is 'overFullScreen'
+  iOSModalPresentationStyle: 'pageSheet',
 };
 
 ImageSelector.launchPicker(options, (error, response) => {
