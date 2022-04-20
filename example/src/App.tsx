@@ -22,7 +22,8 @@ const options: ImageSelectorOptions = {
   cancelButtonTitle: '취소',
   takePhotoButtonTitle: '사진 촬영',
   chooseFromLibraryButtonTitle: '앨범에서 가져오기',
-  iOSGridNumber: 4,
+  iOSGridNumber: 3,
+  iOSModalPresentationStyle: 'pageSheet',
 };
 
 export default function App() {
