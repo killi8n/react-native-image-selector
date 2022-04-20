@@ -150,10 +150,24 @@ class ImageSelector: NSObject, UINavigationControllerDelegate {
         self.imageShowerViewController = ImageShowerViewController(fetchedAssets: self.fetchedAssets, options: self.options, callback: callback)
         guard let imageShowerViewController = self.imageShowerViewController else { return }
         PHPhotoLibrary.shared().register(self)
+        
         DispatchQueue.main.async {
             guard let rootViewController = RCTPresentedViewController() else { return }
             let navigationController = UINavigationController(rootViewController: imageShowerViewController)
             navigationController.modalPresentationStyle = .overFullScreen
+            if #available(iOS 15.0, *) {
+                if let iOSModalPresentationStyle = self.options["iOSModalPresentationStyle"] as? String {
+                    if iOSModalPresentationStyle == "pageSheet" {
+                        navigationController.modalPresentationStyle = .pageSheet
+                        navigationController.isModalInPresentation = true
+                        if let sheet = navigationController.sheetPresentationController {
+                            sheet.detents = [.medium(), .large()]
+                            sheet.prefersGrabberVisible = true
+                            sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+                        }
+                    }
+                }
+            }
             rootViewController.present(navigationController, animated: true, completion: nil)
         }
     }
@@ -191,6 +205,9 @@ class ImageSelector: NSObject, UINavigationControllerDelegate {
             }
             if let iOSGridNumber = options["iOSGridNumber"] {
                 self.options["iOSGridNumber"] = iOSGridNumber
+            }
+            if let iOSModalPresentationStyle = options["iOSModalPresentationStyle"] {
+                self.options["iOSModalPresentationStyle"] = iOSModalPresentationStyle
             }
         }
     }
