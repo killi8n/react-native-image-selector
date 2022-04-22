@@ -25,7 +25,10 @@ export interface ImageSelectorOptions {
     reTryTitle?: string;
     okTitle?: string;
   };
+  // iOS only
   iOSGridNumber?: 3 | 4;
+  // iOS only, should be upper than iOS 15.0 for 'pageSheet'
+  iOSModalPresentationStyle?: 'pageSheet' | 'overFullScreen';
 }
 
 interface ImageSelectorError {
