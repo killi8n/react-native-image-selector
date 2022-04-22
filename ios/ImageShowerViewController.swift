@@ -79,6 +79,11 @@ class ImageShowerViewController: UIViewController {
         self.view.addConstraints([indicatorCenterXAnchor, indicatorCenterYAnchor])
     }
     
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        self.collectionView.collectionViewLayout.invalidateLayout()
+    }
+    
     @objc
     func dismissViewController(_ sender: UIBarButtonItem) {
         self.dismiss(animated: true) { [weak self] in
